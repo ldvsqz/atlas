@@ -244,8 +244,7 @@ function User({ menu }) {
                           onClick={() => handleViewProfile(user.uid)}
                           sx={{
                             color: (() => {
-                              const daysLeft = (new Date(util.getDateFromFirebase(user.until)) - new Date()) / (1000 * 60 * 60 * 24);
-                              return daysLeft > 0 && daysLeft <= 5 ? '#DAA520' : util.dateExpireColor(util.getDateFromFirebase(user.until));
+                              return util.dateExpireColor(util.getDateFromFirebase(user.until));
                             })(),
                             cursor: 'pointer'
                           }}>

@@ -35,15 +35,22 @@ class Util {
     };
 
     dateExpireColor(_date) {
-        const daysLeft = new Date(_date) - new Date();
-        if (daysLeft <= 0) {
-            return `red`;
-        } else if (daysLeft <= 7) {
-            return `orange`
+        const now = new Date();
+        const target = new Date(_date);
+
+        const diffTime = target - now;
+        const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (daysLeft <= -30) {
+            return "gray"; // inactive (expired long ago)
+        } else if (daysLeft < 0) {
+            return "red"; // recently expired
+        } else if (daysLeft <= 5) {
+            return "orange"; // about to expire
         } else {
-            return `green`
+            return "green"; // active
         }
-    };
+    }
 
     removeAccents(str) {
         return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
