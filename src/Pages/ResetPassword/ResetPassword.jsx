@@ -5,13 +5,11 @@ import { Link } from "react-router-dom";
 import { auth, sendPasswordReset } from "../../../Firebase/authFunctions";
 import { TextField, Button, Typography, Container, ListItemIcon } from '@mui/material';
 import "./ResetPassword.css";
-import AtlasSnackbar from "../../Components/snackbar/AtlasSnackbar";
 
 
 function ResetPassword() {
   const [email, setEmail] = useState("");
   const [user, loading, error] = useAuthState(auth);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
   const navigate = useNavigate();
 
 
@@ -21,14 +19,6 @@ function ResetPassword() {
     if (user) navigate("/profile:id");
   }, [user, loading]);
 
-
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-  };
-
-  const handleShowSnackbar = () => {
-    setSnackbarOpen(true);
-  };
 
   return (
     <Container maxWidth="sm" sx={{ mt: 12 }}>
@@ -48,7 +38,7 @@ function ResetPassword() {
         variant="contained" color="primary" fullWidth sx={{ mt: 2 }}
         onClick={() => sendPasswordReset(email)
           .catch(err => {
-            handleShowSnackbar()
+            console.log(err);
           })}
       >
         Enviar correo de recuperación
@@ -56,7 +46,6 @@ function ResetPassword() {
       <Typography variant="body1" align="center" gutterBottom>
         <Link to="/">Iniciar sesión</Link>
       </Typography>
-      <AtlasSnackbar message="Correo inválido" open={snackbarOpen} severity="error" handleClose={handleSnackbarClose} />
     </Container >
   );
 }

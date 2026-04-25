@@ -10,7 +10,6 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import DialogTitle from '@mui/material/DialogTitle';
 import Dialog from '@mui/material/Dialog';
-import AtlasSnackbar from "../../Components/snackbar/AtlasSnackbar";
 import Backdrop from '@mui/material/Backdrop';
 import CircularProgress from '@mui/material/CircularProgress';
 import { Timestamp } from 'firebase/firestore';
@@ -29,20 +28,12 @@ function SetUser({ user, onSave }) {
   const handleClose = () => setOpen(false);
 
   const [openBackdrop, setOpenBackDrop] = useState(false);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
 
   useEffect(() => {
     setUserState(userState)
   }, []);
 
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-  };
-
-  const handleShowSnackbar = () => {
-    setSnackbarOpen(true);
-  };
 
   const handleCloseBackDrop = () => {
     setOpenBackDrop(false);
@@ -62,7 +53,6 @@ function SetUser({ user, onSave }) {
       handleCloseBackDrop();
     }).catch(() => {
       handleCloseBackDrop();
-      handleShowSnackbar();
     });
   };
 
@@ -135,7 +125,6 @@ function SetUser({ user, onSave }) {
           <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
             <CircularProgress color="inherit" />
           </Backdrop>
-          <AtlasSnackbar message="Error al actualizar" open={snackbarOpen} severity="error" handleClose={handleSnackbarClose} />
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancelar</Button>

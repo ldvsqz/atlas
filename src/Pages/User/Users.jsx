@@ -42,6 +42,7 @@ import 'dayjs/locale/es';
 //components
 import Menu from '../../Components/Menu/Menu';
 import userService from '../../../Firebase/userService';
+import { useSnackbar } from '../../Components/snackbar/AtlasSnackbar';
 
 function User({ menu }) {
   const [Users, setUsers] = useState([]);
@@ -59,26 +60,23 @@ function User({ menu }) {
     birthday: null,
     role: 1
   });
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
   const navigate = useNavigate();
   const util = new Util();
+
+  const { showSnackbar } = useSnackbar();
 
 
   useEffect(() => {
     const fetchUsers = async () => {
       const UsersData = await UserService.getAll();
       setUsers(UsersData);
-      const activeUsers = UsersData.filter((user) => util.isMembershipActive(user.until));
+      const activeUsers = UsersData.filter((user) => util.isMembershipDisplayable(user.until));
       setFilteredUsers(activeUsers);
       setLoading(false)
     };
     fetchUsers();
   }, []);
 
-
-  const handleShowSnackbar = () => {
-    setSnackbarOpen(true);
-  };
 
   const handleSearch = (event) => {
     const term = event.target.value.toLowerCase();
@@ -108,7 +106,7 @@ function User({ menu }) {
       updatedUser.until = newFirebaseUntil;
 
       await UserService.update(user.uid, updatedUser);
-
+      showSnackbar(`Membresía de ${user.name} renovada hasta ${util.formatDateShort(newUntilDate)}`, 'success');
       // Add finance movement
       const movement = {
         type: 'income',
@@ -118,7 +116,7 @@ function User({ menu }) {
         category: 'membresia'
       };
       FinanceService.add(movement).then(() => {
-        handleShowSnackbar();
+        showSnackbar('Movimiento financiero agregado exitosamente', 'success');
       }).catch((error) => {
         console.error('Error adding finance movement:', error);
       });
@@ -128,6 +126,17 @@ function User({ menu }) {
       setFilteredUsers(UsersData);
     }
   };
+
+  const handleWaNotificationResponse = (response, user) => {
+    if (response) {
+     const message = util.selectMembershipMessage(user.name, user.until);
+     if(user.phone){
+     util.openWAChat(user.phone, message);
+    } else {
+      showSnackbar('El usuario no tiene un número telefónico registrado.', 'error');
+    }
+  }
+}
 
   const handleOpenAddUserModal = () => {
     setOpenAddUserModal(true);
@@ -158,7 +167,7 @@ function User({ menu }) {
       setUsers(UsersData);
       setFilteredUsers(UsersData);
       handleCloseAddUserModal();
-      handleShowSnackbar();
+      showSnackbar('Usuario creado exitosamente', 'success');
     } catch (error) {
       console.error('Error creating user:', error);
     }
@@ -239,7 +248,9 @@ function User({ menu }) {
                           padding: '4px',
                           cursor: 'pointer'
                         }}>
-                        <TableCell onClick={() => handleViewProfile(user.uid)} sx={{ cursor: 'pointer' }}>{user.name}</TableCell>
+                        <TableCell onClick={() => handleViewProfile(user.uid)} sx={{ cursor: 'pointer' }}>
+                          {user.name}
+                          </TableCell>
                         <TableCell
                           onClick={() => handleViewProfile(user.uid)}
                           sx={{
@@ -258,6 +269,15 @@ function User({ menu }) {
                             message={`¿Desea renovar la membresía de: ${user.name}?`}
                             onResponse={(response) => handleRenewResponse(response, user)}
                           />
+                          { 
+                          !util.isMembershipActive(user.until)  &&
+                            <Alert
+                              buttonName="Notificar"
+                              title="Notificar"
+                              message={`¿Desea notificar elvencimiento de la membresía de: ${user.name}?`}
+                              onResponse={(response) => handleWaNotificationResponse(response, user)}
+                            />
+                          }
                         </TableCell>
                       </TableRow>
                     ) : null

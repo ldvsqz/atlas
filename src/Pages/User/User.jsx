@@ -24,7 +24,6 @@ import Routines from '../../Components/Routines/Routines';
 import SetRoutine from "../../Components/Routines/SetRoutine";
 import SetStats from '../../Components/Stats/SetStats';
 import Stats from '../../Components/Stats/Stats';
-import AtlasSnackbar from "../../Components/snackbar/AtlasSnackbar";
 //serives and utilities
 import StatService from '../../../Firebase/statsService';
 import UserService from '../../../Firebase/userService';
@@ -41,8 +40,6 @@ function User({ menu }) {
   const [stats, setStats] = useState({});
   const [routine, setRoutine] = useState({});
   const [loading, setLoading] = useState(true);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarNumberOpen, setsnackbarNumberOpen] = useState(false);
   const [currentRol, setRol] = useState(localStorage.getItem("ROL"));
   const [currentUid, setCurrentUid] = useState(localStorage.getItem("UID"));
 
@@ -78,23 +75,6 @@ function User({ menu }) {
   }, [location.state, params.uid, navigate]);
 
 
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-  };
-
-  const handleShowSnackbar = () => {
-    setSnackbarOpen(true);
-  };
-
-  const handleSnackbarCloseNumber = () => {
-    setsnackbarNumberOpen(false);
-  };
-
-  const handleShowSnackbarNumber = () => {
-    setsnackbarNumberOpen(true);
-  };
-
-
 
   function handleOnRenew(response) {
     if (response) {
@@ -104,7 +84,7 @@ function User({ menu }) {
       refreshedUser.until = newFirebaseUntil;
       setUser(refreshedUser);
       UserService.update(user.uid, refreshedUser).then(() => {
-        handleShowSnackbar()
+        console.log("Membresía renovada");
       });
     }
   }
@@ -209,8 +189,6 @@ function User({ menu }) {
             } */}
           </Box>
         )}
-        <AtlasSnackbar message="Membresía actualizada" open={snackbarOpen} severity="info" handleClose={handleSnackbarClose} />
-        <AtlasSnackbar message="Número copaido al cortapapeles" open={snackbarNumberOpen} severity="info" handleClose={handleSnackbarCloseNumber} />
       </Container>
     </div >
   );
