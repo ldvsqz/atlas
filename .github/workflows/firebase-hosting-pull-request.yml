@@ -21,6 +21,9 @@ jobs:
 
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          args: deploy --only hosting:preview
-        env:
-          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ATLAS_GYM_PARTNER }}
+          # La acción automáticamente detecta si es un PR y crea un canal de previsualización.
+          # No necesitas 'args: deploy --only hosting:preview'.
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_ATLAS_GYM_PARTNER }}'
+          projectId: atlas-gym-partner # Es buena práctica especificar el project ID
+          # No necesitas la sección 'env' para GCP_SA_KEY, ya que firebaseServiceAccount se pasa directamente en 'with'.
