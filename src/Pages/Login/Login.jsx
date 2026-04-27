@@ -8,6 +8,7 @@ import "./Login.css";
 import GoogleIcon from '@mui/icons-material/Google';
 import CircularProgress from '@mui/material/CircularProgress';
 import Backdrop from '@mui/material/Backdrop';
+import { useSnackbar } from '../../Components/snackbar/AtlasSnackbar';
 
 
 function Login() {
@@ -18,6 +19,7 @@ function Login() {
   const [openSnack, setOpen] = useState(false);
   const navigate = useNavigate();
 
+  const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
     if (user) {
@@ -31,6 +33,9 @@ function Login() {
           // navigate(`/user/${uid}`, { state: { uid } });
           navigate(`/users`, { state: { uid } });
         }
+      }).catch(error => {
+        setLoadingCircle(false);
+        showSnackbar('Error al obtener datos del usuario', 'error');
       });
     }
   }, [user, loading]);
@@ -71,6 +76,7 @@ function Login() {
               signInWithEmailAndPassword(auth, email, password)
                 .catch(() => {
                   setLoadingCircle(false);
+                  showSnackbar('Error al iniciar sesión. Verifique sus credenciales e intente nuevamente.', 'error');
                 })
             }
             }
@@ -86,6 +92,7 @@ function Login() {
               })
                 .catch(() => {
                   setLoadingCircle(false);
+                  showSnackbar('Error al iniciar sesión con Google', 'error');
                 })
             }}>
             <ListItemIcon>

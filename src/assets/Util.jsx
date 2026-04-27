@@ -101,9 +101,9 @@ class Util {
     };
 
 
-    openWAChat(phoneNumber) {
+    openWAChat(phoneNumber, message) {
         const formattedNumber = encodeURIComponent(`506${phoneNumber}`);
-        const url = "https://api.whatsapp.com/send?phone=" + formattedNumber;
+        const url = "https://api.whatsapp.com/send?phone=" + formattedNumber + "&text=" + encodeURIComponent(message);
         window.open(url);
     }
 

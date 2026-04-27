@@ -17,6 +17,8 @@ import 'dayjs/locale/es';
 import dayjs from 'dayjs';
 import "./user.css";
 import UserModel from '../../models/UserModel';
+import { useSnackbar } from '../../Components/snackbar/AtlasSnackbar';
+
 
 
 const today = dayjs();
@@ -29,6 +31,7 @@ function SetUser({ user, onSave }) {
 
   const [openBackdrop, setOpenBackDrop] = useState(false);
 
+  const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
     setUserState(userState)
@@ -51,8 +54,10 @@ function SetUser({ user, onSave }) {
       onSave(updatedUser);
       handleClose();
       handleCloseBackDrop();
+      showSnackbar('Datos del usuario guardados correctamente', 'success');
     }).catch(() => {
       handleCloseBackDrop();
+      showSnackbar('Error al guardar los datos del usuario', 'error');
     });
   };
 
@@ -98,12 +103,13 @@ function SetUser({ user, onSave }) {
                   format="LL"
                   label="Fecha de nacimiento"
                   maxDate={today}
-                  onChange={(newDate) => setUserState(
+                  onChange={(newDate) => {
+                    setUserState(
                     {
                       ...userState,
                       birthday: Timestamp.fromDate(new Date(newDate)),
                     }
-                  )} />
+                  )}} />
               </LocalizationProvider>
             </Grid>
             <Grid item xs={12} mt={2}>
