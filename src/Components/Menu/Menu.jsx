@@ -31,7 +31,7 @@ import "./Menu.css";
 
 
 
-function Menu({ header, toggleThemeMode, themeMode }) {
+function Menu({ header, version,toggleThemeMode, themeMode }) {
   const [uid, setUid] = useState(localStorage.getItem("UID"))
   const [currentRol, setRol] = useState(localStorage.getItem("ROL"));
   const [showMenu, setMenu] = useState(false);
