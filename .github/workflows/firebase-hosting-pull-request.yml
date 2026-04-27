@@ -19,7 +19,7 @@ jobs:
       - name: Build
         run: npm run build
 
-      - uses: w9jds/firebase-action@v13.0.0
+      - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           args: deploy --only hosting:preview
         env:
