@@ -42,6 +42,9 @@ import 'jspdf-autotable';
 
 import dayjs from 'dayjs';
 
+import { useSnackbar } from '../../Components/snackbar/AtlasSnackbar';
+
+
 
 const today = dayjs();
 
@@ -62,6 +65,8 @@ function Finance({ menu }) {
     const incomeCategories = ['Membresías', 'Productos', 'Servicios', 'Otro'];
     const expenseCategories = ['Renta', 'Servicios', 'Equipo', 'Suministros', 'Otro'];
 
+    const { showSnackbar } = useSnackbar();
+
     useEffect(() => {
         fetchFinances();
     }, []);
@@ -79,6 +84,7 @@ function Finance({ menu }) {
         } catch (error) {
             console.error('Error fetching finances:', error);
             setFinances([]);
+            showSnackbar('Error al obtener los registros financieros', 'error');
         } finally {
             setLoading(false);
         }
@@ -107,6 +113,7 @@ function Finance({ menu }) {
             handleClose();
         } catch (error) {
             console.error('Error saving finance:', error);
+            showSnackbar('Error al guardar el registro financiero', 'error');
         }
     };
 
@@ -123,6 +130,7 @@ function Finance({ menu }) {
                 fetchFinances();
             } catch (error) {
                 console.error('Error deleting finance:', error);
+                showSnackbar('Error al eliminar el registro financiero', 'error');
             }
         }
     };

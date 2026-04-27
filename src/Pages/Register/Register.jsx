@@ -8,7 +8,6 @@ import ResetPassword from "../ResetPassword/ResetPassword";
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import AtlasSnackbar from "../../Components/snackbar/AtlasSnackbar";
 import { Timestamp } from 'firebase/firestore';
 import Backdrop from '@mui/material/Backdrop';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -24,7 +23,6 @@ function Register() {
   const [dni, setDni] = useState("");
   const [phone, setPhone] = useState("");
   const [user, loading, error] = useAuthState(auth);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [openBackdrop, setOpenBackDrop] = useState(false);
   const navigate = useNavigate();
 
@@ -32,11 +30,10 @@ function Register() {
 
   const register = () => {
     if (!name) {
-      handleShowSnackbar();
     }
     handleOpenBackDrop()
     registerWithEmailAndPassword(dni, birthday, phone, name, email, password).catch(() => {
-      handleShowSnackbar();
+
     })
   };
 
@@ -58,13 +55,6 @@ function Register() {
     }
   }, [user]);
 
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-  };
-
-  const handleShowSnackbar = () => {
-    setSnackbarOpen(true);
-  };
 
   return (
     <Container maxWidth="sm" sx={{ mt: 12 }}>
@@ -129,7 +119,6 @@ function Register() {
       <Typography variant="body1" align="center" gutterBottom>
         ¿Ya tienes cuenta? <Link to="/">Iniciar sesión</Link>.
       </Typography>
-      <AtlasSnackbar message="Datos inválidos" open={snackbarOpen} severity="error" handleClose={handleSnackbarClose} />
       <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
         <CircularProgress color="inherit" />
       </Backdrop>

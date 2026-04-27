@@ -35,28 +35,31 @@ class Util {
     };
 
     dateExpireColor(_date) {
-        const daysLeft = new Date(_date) - new Date();
-        if (daysLeft <= 0) {
-            return `red`;
-        } else if (daysLeft <= 7) {
-            return `orange`
-        } else {
-            return `green`
+        const now = new Date();
+        const expireDate = new Date(_date);
+
+        const diffMs = expireDate - now;
+        const daysLeft = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        if (daysLeft < -35) {
+            return 'gray'; // ⚪ Inactivo
         }
-    };
+        if (daysLeft < 0) {
+            return '#ff6060'; // 🔴 Vencido
+        }
+        if (daysLeft <= 7) {
+            return '#ffc061'; // 🟠 Próximo a vencer
+        }
+        if (daysLeft <= 15) {
+            return '#a9ff63'; // 🟡 Medio
+        }
+        return '#70ff63'; // 🟢 Activo
+    }
 
     removeAccents(str) {
         return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     };
 
-    calculateProximityColor(current, goal) {
-        const diferencia = Math.abs(current - goal);
-        const proximidad = diferencia === 0 ? 0 : (diferencia / 10);
-        const verde = Math.round(255 * (1 - proximidad));
-        const rojo = Math.round(255 * proximidad);
-        const azul = 0;
-        return proximidad === 0 ? `rgb(255, 0, 0)` : `rgb(${rojo}, ${verde}, ${azul})`;
-    };
 
     calculateIMC(weight_kg, Height_cm) {
         const HeightMeters = Height_cm / 100;
@@ -98,11 +101,27 @@ class Util {
     };
 
 
-    openWAChat(phoneNumber) {
+    openWAChat(phoneNumber, message) {
         const formattedNumber = encodeURIComponent(`506${phoneNumber}`);
-        const url = "https://api.whatsapp.com/send?phone=" + formattedNumber;
+        const url = "https://api.whatsapp.com/send?phone=" + formattedNumber + "&text=" + encodeURIComponent(message);
         window.open(url);
     }
+
+    selectMembershipMessage(name, until) {
+        const membershipDate = new Date(this.getDateFromFirebase(until));
+        const today = new Date();
+        const diffTime = membershipDate - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 0) {
+            return `Hola, ${name}. Esperamos que estés muy bien 😊 tu membresía venció el ${membershipDate.toLocaleDateString()} te invitamos a renovarla para continuar con tus entrenamientos 🥊`;
+        } else if (diffDays <= 7) {
+            return `Hola, ${name}. Esperamos que estés muy bien 😊 tu membresía está por vencerá el ${membershipDate.toLocaleDateString()} podés renovarla en cualquier momento para seguir entrenando 🥊`;
+        } else {
+            return `Hola, ${name}. Esperamos que estés muy bien 😊 tu membresía ha sido renovada ✅ ya podés continuar entrenando con normalidad 🥊`;
+        }
+    }
+
 
     openURL(url) {
         window.open(url);
@@ -142,6 +161,39 @@ class Util {
         const membershipDate = new Date(this.getDateFromFirebase(_date));
         return membershipDate >= currentDate;
     }
+
+    isMembershipDisplayable(_date) {
+        const currentDate = new Date() -30 * 24 * 60 * 60 * 1000; // 30 days ago
+        const membershipDate = new Date(this.getDateFromFirebase(_date));
+        return membershipDate >= currentDate;
+    }
+
+
+    //sendWaExample(){
+    //    const url = "https://graph.facebook.com/<API_VERSION>/<WHATSAPP_BUSINESS_PHONE_NUMBER_ID>/messages";
+    //    const headers = {
+    //    "Authorization": "Bearer <ACCESS_TOKEN>",
+    //    "Content-Type": "application/json",
+    //    };
+    //    const body = {
+    //    messaging_product: "whatsapp",
+    //    to: "<WHATSAPP_USER_PHONE_NUMBER>",
+    //    type: "template",
+    //    template: {
+    //        name: "hello_world",
+    //        language: { code: "en_US" },
+    //    },
+    //    };
+    //    const response = await fetch(url, {
+    //    method: "POST",
+    //    headers,
+    //    body: JSON.stringify(body),
+    //    });
+    //    const data = await response.json();
+    //    console.log(data);
+  //
+    //}
+    
 }
 
 export default Util

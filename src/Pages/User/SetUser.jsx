@@ -10,7 +10,6 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import DialogTitle from '@mui/material/DialogTitle';
 import Dialog from '@mui/material/Dialog';
-import AtlasSnackbar from "../../Components/snackbar/AtlasSnackbar";
 import Backdrop from '@mui/material/Backdrop';
 import CircularProgress from '@mui/material/CircularProgress';
 import { Timestamp } from 'firebase/firestore';
@@ -18,6 +17,8 @@ import 'dayjs/locale/es';
 import dayjs from 'dayjs';
 import "./user.css";
 import UserModel from '../../models/UserModel';
+import { useSnackbar } from '../../Components/snackbar/AtlasSnackbar';
+
 
 
 const today = dayjs();
@@ -29,20 +30,13 @@ function SetUser({ user, onSave }) {
   const handleClose = () => setOpen(false);
 
   const [openBackdrop, setOpenBackDrop] = useState(false);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
+  const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
     setUserState(userState)
   }, []);
 
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-  };
-
-  const handleShowSnackbar = () => {
-    setSnackbarOpen(true);
-  };
 
   const handleCloseBackDrop = () => {
     setOpenBackDrop(false);
@@ -60,9 +54,10 @@ function SetUser({ user, onSave }) {
       onSave(updatedUser);
       handleClose();
       handleCloseBackDrop();
+      showSnackbar('Datos del usuario guardados correctamente', 'success');
     }).catch(() => {
       handleCloseBackDrop();
-      handleShowSnackbar();
+      showSnackbar('Error al guardar los datos del usuario', 'error');
     });
   };
 
@@ -108,12 +103,13 @@ function SetUser({ user, onSave }) {
                   format="LL"
                   label="Fecha de nacimiento"
                   maxDate={today}
-                  onChange={(newDate) => setUserState(
+                  onChange={(newDate) => {
+                    setUserState(
                     {
                       ...userState,
                       birthday: Timestamp.fromDate(new Date(newDate)),
                     }
-                  )} />
+                  )}} />
               </LocalizationProvider>
             </Grid>
             <Grid item xs={12} mt={2}>
@@ -135,7 +131,6 @@ function SetUser({ user, onSave }) {
           <Backdrop sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }} open={openBackdrop}>
             <CircularProgress color="inherit" />
           </Backdrop>
-          <AtlasSnackbar message="Error al actualizar" open={snackbarOpen} severity="error" handleClose={handleSnackbarClose} />
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancelar</Button>
