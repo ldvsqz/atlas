@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import UserService from '../../../Firebase/userService';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
+import EditIcon from '@mui/icons-material/Edit';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -63,7 +64,7 @@ function SetUser({ user, onSave }) {
 
   return (
     <div>
-      <Button sx={{ width: "100%" }} onClick={handleOpen}>Editar datos</Button>
+      <Button fullWidth variant="outlined" startIcon={<EditIcon />} sx={{ width: "100%" }} onClick={handleOpen}>Editar datos</Button>
       <Dialog
         open={open}
         onClose={handleClose}

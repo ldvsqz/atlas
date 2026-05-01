@@ -68,7 +68,9 @@ function SetStats({ stats = new StatsModel(), uid = '', isEditing = false, onSav
 
   return (
     <>
-      <Button onClick={handleOpen}>{isEditing ? 'Editar' : 'Agregar nuevas'}</Button>
+      <Button fullwidth variant="outlined" onClick={handleOpen}>
+        {isEditing ? 'Editar ultimas medidas' : 'Agregar nuevas medidas'}
+      </Button>
       <Dialog
         open={open}
         onClose={handleClose}
