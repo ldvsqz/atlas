@@ -101,11 +101,20 @@ class Util {
     };
 
 
-    openWAChat(phoneNumber, message) {
-        const formattedNumber = encodeURIComponent(`506${phoneNumber}`);
-        const url = "https://api.whatsapp.com/send?phone=" + formattedNumber + "&text=" + encodeURIComponent(message);
-        window.open(url);
-    }
+    openWAChat({ phone, message = "", countryCode = "506" }) {
+    const cleaned = phone.replace(/\D/g, "");
+    const fullNumber = `${countryCode}${cleaned}`;
+    const text = encodeURIComponent(message);
+
+    const appUrl = `whatsapp://send?phone=${fullNumber}&text=${text}`;
+    const webUrl = `https://wa.me/${fullNumber}?text=${text}`;
+
+    window.location.href = appUrl;
+
+    setTimeout(() => {
+        window.open(webUrl, "_blank");
+    }, 1500);
+}
 
     selectMembershipMessage(name, until) {
         const membershipDate = new Date(this.getDateFromFirebase(until));
@@ -167,32 +176,6 @@ class Util {
         const membershipDate = new Date(this.getDateFromFirebase(_date));
         return membershipDate >= currentDate;
     }
-
-
-    //sendWaExample(){
-    //    const url = "https://graph.facebook.com/<API_VERSION>/<WHATSAPP_BUSINESS_PHONE_NUMBER_ID>/messages";
-    //    const headers = {
-    //    "Authorization": "Bearer <ACCESS_TOKEN>",
-    //    "Content-Type": "application/json",
-    //    };
-    //    const body = {
-    //    messaging_product: "whatsapp",
-    //    to: "<WHATSAPP_USER_PHONE_NUMBER>",
-    //    type: "template",
-    //    template: {
-    //        name: "hello_world",
-    //        language: { code: "en_US" },
-    //    },
-    //    };
-    //    const response = await fetch(url, {
-    //    method: "POST",
-    //    headers,
-    //    body: JSON.stringify(body),
-    //    });
-    //    const data = await response.json();
-    //    console.log(data);
-  //
-    //}
     
 }
 

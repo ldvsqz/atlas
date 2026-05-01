@@ -43,6 +43,9 @@ import 'dayjs/locale/es';
 import Menu from '../../Components/Menu/Menu';
 import userService from '../../../Firebase/userService';
 import { useSnackbar } from '../../Components/snackbar/AtlasSnackbar';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+
 
 function User({ menu }) {
   const [Users, setUsers] = useState([]);
@@ -54,6 +57,7 @@ function User({ menu }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [openAddUserModal, setOpenAddUserModal] = useState(false);
   const [checked, setChecked] = React.useState(true);
+  const [showAdmins, setShowAdmins] = React.useState(false);
   const [newUser, setNewUser] = useState({
     name: '',
     phone: '',
@@ -177,12 +181,41 @@ function User({ menu }) {
     setChecked(event.target.checked);
     if (event.target.checked) {
       const filteredUsersData = Users.filter((user) => {
-        return util.isMembershipActive(user.until)
+        const isActive = util.isMembershipActive(user.until);
+        const shouldInclude = showAdmins ? true : user.rol !== 0;
+        return isActive && shouldInclude;
       }
       );
       setFilteredUsers(filteredUsersData);
     } else {
-      setFilteredUsers(Users);
+      const filteredUsersData = Users.filter((user) => {
+        return showAdmins ? true : user.rol !== 0;
+      });
+      setFilteredUsers(filteredUsersData);
+    }
+  };
+
+  const handleChangeShowAdmins = (event) => {
+    setShowAdmins(event.target.checked);
+    if (event.target.checked) {
+      // Show only role 0 users (admins)
+      const filteredUsersData = Users.filter((user) => {
+        return user.rol === 0;
+      });
+      setFilteredUsers(filteredUsersData);
+    } else {
+      // Show role 1 users with active filter applied
+      if (checked) {
+        const filteredUsersData = Users.filter((user) => {
+          return util.isMembershipActive(user.until) && user.rol !== 0;
+        });
+        setFilteredUsers(filteredUsersData);
+      } else {
+        const filteredUsersData = Users.filter((user) => {
+          return user.rol !== 0;
+        });
+        setFilteredUsers(filteredUsersData);
+      }
     }
   };
 
@@ -190,35 +223,40 @@ function User({ menu }) {
 
     <div>
       {menu}
-      <Container fixed sx={{ mt: 4, pr: 0, pl: 0 }}>
-        <Box sx={{ mb: 4 }}>
-          <Grid container spacing={2} sx={{ px: 2 }}>
-            <Grid item xs={12} sm={6}>
-              <TextField label="Buscar" variant="standard" fullWidth
-                value={searchTerm}
-                onFocus={() => setFocused(true)}
-                onBlur={() => setFocused(false)}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  handleSearch(e);
-                }}
-                InputProps={{
-                  startAdornment: focused ? null : (
-                    <InputAdornment position="start">
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <Container fixed sx={{ mt: 4, pr: 0, pl: 0 }}>  
+        <Card sx={{ borderRadius: 3, boxShadow: 2 }}>
+          <CardContent>
+            <TextField label="Buscar" variant="standard" fullWidth
+              value={searchTerm}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                handleSearch(e);
+              }}
+              InputProps={{
+                startAdornment: focused ? null : (
+                  <InputAdornment position="start">
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <FormControlLabel
+              label={'Admins'}
+              control={<Checkbox checked={showAdmins} onChange={handleChangeShowAdmins} />}
+              sx={{ gap: 1, m: 0 }}
+            />
+
+            {!showAdmins && (
               <FormControlLabel
-                label={checked ? `Activos: ${filteredUsers.filter(user => user.rol !== 0 && util.isMembershipActive(user.until)).length}` : `Todos: ${filteredUsers.length}`}
+                label={checked ? `Activos: ${filteredUsers.filter(user => user.rol !== 0 && util.isMembershipActive(user.until)).length}` : `Todos: ${filteredUsers.filter(user => user.rol !== 0).length}`}
                 control={<Checkbox checked={checked} onChange={handleChangeCheck} />}
-                sx={{ gap: 2 }}
+                sx={{ gap: 1, m: 0 }}
               />
-            </Grid>
-          </Grid>
-        </Box>
+            )}
+          </CardContent>
+        </Card>
         {loading ? (
           <Stack spacing={1}>
             <Skeleton variant="text" sx={{ fontSize: '1rem' }} />
@@ -234,23 +272,25 @@ function User({ menu }) {
                 <TableHead>
                   <TableRow>
                     <TableCell>Nombre</TableCell>
-                    <TableCell>Hasta</TableCell>
-                    <TableCell>Acción</TableCell>
+                    {!showAdmins && <TableCell>Hasta</TableCell>}
+                    {!showAdmins && <TableCell>Acción</TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {filteredUsers.map((user) => (
-                    user.rol !== 0 ? (
+                    (user.rol !== 0 || showAdmins) ? (
                       <TableRow
                         key={user.uid}
                         sx={{
                           '&:last-child td, &:last-child th': { border: 0 },
                           padding: '4px',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          backgroundColor: user.rol === 0 ? 'action.selected' : 'inherit'
                         }}>
                         <TableCell onClick={() => handleViewProfile(user.uid)} sx={{ cursor: 'pointer' }}>
                           {user.name}
                           </TableCell>
+                          {!showAdmins && (
                         <TableCell
                           onClick={() => handleViewProfile(user.uid)}
                           sx={{
@@ -260,25 +300,29 @@ function User({ menu }) {
                             })(),
                             cursor: 'pointer'
                           }}>
-                          {util.formatDateShort(util.getDateFromFirebase(user.until))}
+                          {util.formatDateShort(util.getDateFromFirebase(user.until))} {user.rol === 0 && '(Admin)'}
                         </TableCell>
-                        <TableCell>
-                          <Alert
-                            buttonName="Renovar"
-                            title="Renovar membresía"
-                            message={`¿Desea renovar la membresía de: ${user.name}?`}
-                            onResponse={(response) => handleRenewResponse(response, user)}
-                          />
-                          { 
-                          !util.isMembershipActive(user.until)  &&
+                          )}
+                        {!showAdmins && (
+
+                          <TableCell>
                             <Alert
-                              buttonName="Notificar"
-                              title="Notificar"
-                              message={`¿Desea notificar elvencimiento de la membresía de: ${user.name}?`}
-                              onResponse={(response) => handleWaNotificationResponse(response, user)}
+                              buttonName="Renovar"
+                              title="Renovar membresía"
+                              message={`¿Desea renovar la membresía de: ${user.name}?`}
+                              onResponse={(response) => handleRenewResponse(response, user)}
                             />
-                          }
-                        </TableCell>
+                            { 
+                            !util.isMembershipActive(user.until)  &&
+                              <Alert
+                                buttonName="Notificar"
+                                title="Notificar"
+                                message={`¿Desea notificar elvencimiento de la membresía de: ${user.name}?`}
+                                onResponse={(response) => handleWaNotificationResponse(response, user)}
+                              />
+                            }
+                          </TableCell>
+                        )}
                       </TableRow>
                     ) : null
                   ))}

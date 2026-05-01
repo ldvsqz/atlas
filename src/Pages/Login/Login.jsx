@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { auth, signInWithEmailAndPassword, signInWithGoogle } from "../../../Firebase/authFunctions";
-import { TextField, Button, Typography, Container, ListItemIcon } from '@mui/material';
+import { TextField, Button, Typography, Container, ListItemIcon, InputAdornment } from '@mui/material';
 import { useAuthState } from "react-firebase-hooks/auth";
 import UserService from '../../../Firebase/userService'
 import "./Login.css";
 import GoogleIcon from '@mui/icons-material/Google';
+import EmailIcon from '@mui/icons-material/Email';
 import CircularProgress from '@mui/material/CircularProgress';
 import Backdrop from '@mui/material/Backdrop';
+import Divider from '@mui/material/Divider';
 import { useSnackbar } from '../../Components/snackbar/AtlasSnackbar';
 
 
@@ -22,10 +24,11 @@ function Login() {
   const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
+    setLoadingCircle(true);
     if (user) {
       UserService.get(user.uid).then(userData => {
         if (!!userData) {
-          setLoadingCircle(true);
+          //setLoadingCircle(true);
           const uid = user.uid;
           localStorage.setItem('UID', uid);
           localStorage.setItem('ROL', userData.rol);
@@ -37,6 +40,8 @@ function Login() {
         setLoadingCircle(false);
         showSnackbar('Error al obtener datos del usuario', 'error');
       });
+    } else {
+      setLoadingCircle(false);
     }
   }, [user, loading]);
 
@@ -51,7 +56,7 @@ function Login() {
       ) : (
         <div>
           <Typography variant="h4" align="center" gutterBottom>
-            Atlas
+            Inicio de sesión
           </Typography>
           <TextField
             label="Correo electrocnico"
@@ -83,6 +88,13 @@ function Login() {
           >
             Iniciar sesión
           </Button>
+          <Typography variant="body1" align="center" gutterBottom>
+            <Link to="/reset">Recuperar contraseña</Link>
+          </Typography>
+          
+          <br />
+          <Divider/>
+          <br />
           <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 2 }}
             onClick={() => {
               setLoadingCircle(true);
@@ -98,16 +110,13 @@ function Login() {
             <ListItemIcon>
               <GoogleIcon />
             </ListItemIcon>
-            Iniciar sesión con Google
+            Continua con Google
           </Button>
-          <Typography variant="body1" align="center" gutterBottom>
-            <Link to="/reset">Recuperar contraseña</Link>
-          </Typography>
-          {
+          <br />
+          <br />
             <Typography variant="body1" align="center" gutterBottom>
               ¿No tienes cuenta? <Link to="/register">Registrar</Link>.
             </Typography>
-          }
         </div>
       )}
 
