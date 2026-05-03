@@ -14,11 +14,12 @@ import Exercises from "./Pages/Exercises/Exercises";
 import Aboutus from "./Pages/Aboutus/Aboutus";
 import ResetPassword from './Pages/ResetPassword/ResetPassword';
 import Finance from "./Pages/Finance/Finance";
+import TrainingPage from "./features/training/pages/TrainingPage";
 import packageInfo from '../package.json';
 
 
 function App() {
-  const [themeMode, setThemeMode] = useState(localStorage.getItem("THEME") || 'light');
+  const [themeMode, setThemeMode] = useState(localStorage.getItem("THEME") || 'dark');
 
   useEffect(() => {
     localStorage.setItem("THEME", themeMode);
@@ -55,6 +56,7 @@ function App() {
           <Route path="/events" element={<Events menu={getMenu("Eventos")} />} />
           <Route path="/users" element={<Users menu={getMenu("Personas")} />} />
           <Route path="/finance" element={<Finance menu={getMenu("Finanzas")} />} />
+          <Route path="/training" element={<TrainingPage menu={getMenu("Planificación")} />} />
           <Route path="/settings" element={<Settings menu={getMenu("Configuración")} />} />
           <Route path="/exercises" element={<Exercises menu={getMenu("Ejercicios")} />} />
           <Route path="/aboutus" element={<Aboutus menu={getMenu("Sobre nosotros")} />} />

@@ -122,6 +122,16 @@ function Menu({ header, version,toggleThemeMode, themeMode }) {
         </ListItem>
         }
 
+        {currentRol == 0 && <ListItem key={"Planificación"} disablePadding>
+          <ListItemButton component={Link} to="/training">
+            <ListItemIcon>
+              <FitnessCenterIcon />
+            </ListItemIcon>
+            <ListItemText primary={"Planificación"} />
+          </ListItemButton>
+        </ListItem>
+        }
+
         <ListItem key={"Sobre nosotros"} disablePadding>
           <ListItemButton component={Link} to="/aboutus">
             <ListItemIcon>
