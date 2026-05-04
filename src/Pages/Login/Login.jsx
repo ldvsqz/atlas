@@ -28,13 +28,15 @@ function Login() {
     if (user) {
       UserService.get(user.uid).then(userData => {
         if (!!userData) {
-          //setLoadingCircle(true);
           const uid = user.uid;
           localStorage.setItem('UID', uid);
           localStorage.setItem('ROL', userData.rol);
           setLoadingCircle(false);
-          // navigate(`/user/${uid}`, { state: { uid } });
-          navigate(`/users`, { state: { uid } });
+          
+          // Redirigir a la última ruta guardada, o a /users por defecto
+          const lastRoute = localStorage.getItem('LAST_ROUTE');
+          const redirectPath = lastRoute || '/users';
+          navigate(redirectPath, { state: { uid } });
         }
       }).catch(error => {
         setLoadingCircle(false);
