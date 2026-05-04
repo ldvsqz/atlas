@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { colors } from '@mui/material';
@@ -44,11 +44,11 @@ function App() {
   const version = packageInfo.version;
   const getMenu = (header = "Atlas") => (<Menu header={header} version={version} toggleThemeMode={toggleThemeMode} themeMode={themeMode} />);
 
-
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
+        <RouteTracker>
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/reset" element={<ResetPassword />} />
@@ -63,9 +63,24 @@ function App() {
           <Route path="/user/:uid" element={<User menu={getMenu("Atlas")} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </RouteTracker>
       </Router>
     </ThemeProvider>
   );
+}
+
+// Componente para guardar la ruta actual en localStorage
+function RouteTracker({ children }) {
+  const location = useLocation();
+
+  useEffect(() => {
+    // No guardar rutas de login, reset o register
+    if (!["/", "/login", "/reset", "/register"].includes(location.pathname)) {
+      localStorage.setItem("LAST_ROUTE", location.pathname + location.search);
+    }
+  }, [location]);
+
+  return children;
 }
 
 export default App;
