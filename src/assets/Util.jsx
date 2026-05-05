@@ -101,20 +101,38 @@ class Util {
     };
 
 
-    openWAChat({ phone, message = "", countryCode = "506" }) {
-    const cleaned = phone.replace(/\D/g, "");
-    const fullNumber = `${countryCode}${cleaned}`;
-    const text = encodeURIComponent(message);
+    openWAChat(phoneOrOptions, message = "", countryCode = "506") {
+        let phone = phoneOrOptions;
 
-    const appUrl = `whatsapp://send?phone=${fullNumber}&text=${text}`;
-    const webUrl = `https://wa.me/${fullNumber}?text=${text}`;
+        if (phoneOrOptions && typeof phoneOrOptions === 'object') {
+            phone = phoneOrOptions.phone || '';
+            message = phoneOrOptions.message || '';
+            countryCode = phoneOrOptions.countryCode || countryCode;
+        }
 
-    window.location.href = appUrl;
+        if (!phone) {
+            console.error('openWAChat: phone number is required');
+            return;
+        }
 
-    setTimeout(() => {
-        window.open(webUrl, "_blank");
-    }, 1500);
-}
+        const cleaned = phone.toString().replace(/\D/g, "");
+        if (!cleaned) {
+            console.error('openWAChat: invalid phone number', phone);
+            return;
+        }
+
+        const fullNumber = `${countryCode}${cleaned}`;
+        const text = encodeURIComponent(message);
+
+        const appUrl = `whatsapp://send?phone=${fullNumber}&text=${text}`;
+        const webUrl = `https://wa.me/${fullNumber}?text=${text}`;
+
+        window.location.href = appUrl;
+
+        setTimeout(() => {
+            window.open(webUrl, "_blank");
+        }, 1500);
+    }
 
     selectMembershipMessage(name, until) {
         const membershipDate = new Date(this.getDateFromFirebase(until));
@@ -123,11 +141,11 @@ class Util {
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
         if (diffDays < 0) {
-            return `Hola, ${name}. Esperamos que estés muy bien 😊 tu membresía venció el ${membershipDate.toLocaleDateString()} te invitamos a renovarla para continuar con tus entrenamientos 🥊`;
+            return `Hola, ${name}. Esperamos que estés muy bien � tu membresía venció el ${membershipDate.toLocaleDateString()} te invitamos a renovarla para continuar con tus entrenamientos 💪`;
         } else if (diffDays <= 7) {
-            return `Hola, ${name}. Esperamos que estés muy bien 😊 tu membresía está por vencerá el ${membershipDate.toLocaleDateString()} podés renovarla en cualquier momento para seguir entrenando 🥊`;
+            return `Hola, ${name}. Esperamos que estés muy bien 🙂 tu membresía está por vencer el ${membershipDate.toLocaleDateString()} podés renovarla en cualquier momento para seguir entrenando 💪`;
         } else {
-            return `Hola, ${name}. Esperamos que estés muy bien 😊 tu membresía ha sido renovada ✅ ya podés continuar entrenando con normalidad 🥊`;
+            return `Hola, ${name}. Esperamos que estés muy bien 🙂 tu membresía ha sido renovada ✅ ya podés continuar entrenando con normalidad 💪`;
         }
     }
 
