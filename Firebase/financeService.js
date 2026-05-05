@@ -117,6 +117,27 @@ class FinanceService {
             throw error;
         }
     }
+
+    async getAllMonthlyCashboxes() {
+        try {
+            const cashboxRef = collection(db, CASHBOX_COLLECTION_NAME);
+            const querySnapshot = await getDocs(cashboxRef);
+            const cashboxes = [];
+
+            querySnapshot.forEach((docSnapshot) => {
+                cashboxes.push({ id: docSnapshot.id, ...docSnapshot.data() });
+            });
+
+            return cashboxes.sort((a, b) => {
+                const monthA = (a.month || a.id || '').toString();
+                const monthB = (b.month || b.id || '').toString();
+                return monthB.localeCompare(monthA);
+            });
+        } catch (error) {
+            console.error('Error trying to get monthly cashbox history:', error);
+            throw error;
+        }
+    }
 }
 
 export default FinanceService.getInstance();
