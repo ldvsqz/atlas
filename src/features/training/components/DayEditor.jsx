@@ -99,7 +99,7 @@ function DayEditor({ cycleId, weeks = 1, exercises }) {
             <AccordionDetails>
               <Stack spacing={2.5}>
                 <Box
-                    key={BLOCK_LABELS.shadowBlock?.toLowerCase()}
+                    key={BLOCK_LABELS.warmupBlock?.toLowerCase()}
                     sx={{
                       border: '1px solid',
                       borderColor: 'divider',
@@ -108,7 +108,7 @@ function DayEditor({ cycleId, weeks = 1, exercises }) {
                     }}
                   >
                     <Typography variant="overline" color="text.secondary">
-                      Bloque de {BLOCK_LABELS.shadowBlock?.toLowerCase()}
+                      Bloque de {BLOCK_LABELS.warmupBlock?.toLowerCase()}
                     </Typography>
                   </Box>
                 <Box

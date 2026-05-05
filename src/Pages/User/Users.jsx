@@ -181,7 +181,7 @@ function User({ menu }) {
     setChecked(event.target.checked);
     if (event.target.checked) {
       const filteredUsersData = Users.filter((user) => {
-        const isActive = util.isMembershipActive(user.until);
+        const isActive = util.isMembershipDisplayable(user.until);
         const shouldInclude = showAdmins ? true : user.rol !== 0;
         return isActive && shouldInclude;
       }

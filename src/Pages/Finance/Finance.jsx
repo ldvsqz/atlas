@@ -38,6 +38,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import FinanceService from '../../../Firebase/financeService';
 import Util from '../../assets/Util';
+import CashboxHistory from './CashboxHistory';
 import FinanceModel from '../../models/FinanceModel';
 import './Finance.css';
 import jsPDF from 'jspdf';
@@ -54,6 +55,7 @@ const today = dayjs();
 const CURRENCY_SYMBOL = '';
 
 const formatCurrency = (amount) => `${CURRENCY_SYMBOL}${Number(amount || 0).toFixed(2)}`;
+const formatMonth = (month) => (month ? dayjs(month, 'YYYY-MM').format('MMMM YYYY') : '-');
 
 const getFinanceDate = (finance) => {
     if (finance.date instanceof Date) return finance.date;
@@ -81,6 +83,9 @@ function Finance({ menu }) {
     const [savedCashbox, setSavedCashbox] = useState(null);
     const [cashboxLoading, setCashboxLoading] = useState(false);
     const [cashboxSaving, setCashboxSaving] = useState(false);
+    const [cashboxHistory, setCashboxHistory] = useState([]);
+    const [historyOpen, setHistoryOpen] = useState(false);
+    const [historyLoading, setHistoryLoading] = useState(false);
     const util = new Util();
 
     const incomeCategories = ['Membresías', 'Productos', 'Servicios', 'Otro'];
@@ -95,6 +100,23 @@ function Finance({ menu }) {
     useEffect(() => {
         fetchMonthlyCashbox();
     }, [cashboxMonth]);
+
+    useEffect(() => {
+        fetchCashboxHistory();
+    }, []);
+
+    const fetchCashboxHistory = async () => {
+        try {
+            setHistoryLoading(true);
+            const history = await FinanceService.getAllMonthlyCashboxes();
+            setCashboxHistory(history);
+        } catch (error) {
+            console.error('Error fetching cashbox history:', error);
+            showSnackbar('Error al cargar el historial de cajas', 'error');
+        } finally {
+            setHistoryLoading(false);
+        }
+    };
 
     const fetchFinances = async () => {
         try {
@@ -298,6 +320,62 @@ function Finance({ menu }) {
         doc.save(`caja-fin-de-mes-${cashboxMonth}.pdf`);
     };
 
+    const downloadCashboxHistoryPDF = () => {
+        const doc = new jsPDF();
+        const generatedAt = util.formatDate(new Date());
+
+        if (!cashboxHistory || cashboxHistory.length === 0) {
+            doc.text('No hay registros de historial disponibles.', 14, 20);
+            doc.save('historial-cajas.pdf');
+            return;
+        }
+
+        cashboxHistory.forEach((cashbox, index) => {
+            const summary = cashbox.summary || {};
+            const distributions = summary.distributions || cashbox.distributions || {};
+            const monthLabel = formatMonth(cashbox.month || cashbox.id);
+
+            if (index > 0) doc.addPage();
+
+            doc.setFontSize(16);
+            doc.text(`Caja de Fin de Mes - ${monthLabel}`, 14, 20);
+            doc.setFontSize(10);
+            doc.text(`Generado: ${generatedAt}`, 14, 28);
+
+            autoTable(doc, {
+                startY: 36,
+                theme: 'grid',
+                head: [['Concepto', 'Monto']],
+                body: [
+                    ['Ingresos del mes', formatCurrency(summary.monthlyIncome ?? cashbox.monthlyIncome)],
+                    ['Gastos del mes', formatCurrency(summary.monthlyExpense ?? cashbox.monthlyExpense)],
+                    ['Balance total', formatCurrency(summary.totalBalance ?? cashbox.totalBalance)],
+                    ['Deudas', formatCurrency(summary.debts ?? cashbox.debts)],
+                    ['Balance después de deudas', formatCurrency(summary.balanceAfterDebts ?? cashbox.balanceAfterDebts)],
+                    ['Fondo de mantenimiento 20%', formatCurrency(summary.maintenanceFund ?? cashbox.maintenanceFund)],
+                    ['Balance distribuible', formatCurrency(summary.distributableBalance ?? cashbox.distributableBalance)],
+                ],
+                styles: { fontSize: 10 },
+                headStyles: { fillColor: [69, 90, 100] },
+            });
+
+            autoTable(doc, {
+                startY: doc.lastAutoTable.finalY + 8,
+                theme: 'grid',
+                head: [['Distribución', 'Porcentaje', 'Monto']],
+                body: [
+                    ['Parte 1', `${cashbox.distributionPercentages?.first ?? 0}%`, formatCurrency(distributions.first ?? 0)],
+                    ['Parte 2', `${cashbox.distributionPercentages?.second ?? 0}%`, formatCurrency(distributions.second ?? 0)],
+                    ['Parte 3', `${cashbox.distributionPercentages?.third ?? 0}%`, formatCurrency(distributions.third ?? 0)],
+                ],
+                styles: { fontSize: 10 },
+                headStyles: { fillColor: [69, 90, 100] },
+            });
+        });
+
+        doc.save('historial-cajas.pdf');
+    };
+
     const saveCashbox = async () => {
         try {
             setCashboxSaving(true);
@@ -370,6 +448,7 @@ function Finance({ menu }) {
             const saved = await FinanceService.saveMonthlyCashbox(cashboxMonth, payload);
             setSavedCashbox(saved);
             await fetchFinances();
+            await fetchCashboxHistory();
             showSnackbar('Caja mensual guardada correctamente', 'success');
         } catch (error) {
             console.error('Error saving monthly cashbox:', error);
@@ -450,6 +529,7 @@ function Finance({ menu }) {
                         alignItems={{ xs: 'stretch', md: 'center' }}
                         sx={{ mb: 2 }}
                     >
+                        <Grid container spacing={2} sx={{ mb: 2 }}>
                         <Box>
                             <Typography variant="h5" fontWeight={800}>
                                 Caja de fin de mes
@@ -458,8 +538,12 @@ function Finance({ menu }) {
                                 Balance mensual, deudas, fondo de mantenimiento y distribución.
                             </Typography>
                         </Box>
+                        </Grid>
                         <Button variant="outlined" onClick={saveCashbox} disabled={cashboxSaving}>
                             Guardar Caja
+                        </Button>
+                        <Button variant="outlined" onClick={() => setHistoryOpen(true)}>
+                            Historial Caja
                         </Button>
                         <Button variant="outlined" onClick={downloadCashboxPDF}>
                             PDF Caja
@@ -615,6 +699,14 @@ function Finance({ menu }) {
                         </Grid>
                         </Grid>
                         */}
+                <CashboxHistory
+                    open={historyOpen}
+                    onClose={() => setHistoryOpen(false)}
+                    history={cashboxHistory}
+                    loading={historyLoading}
+                    onDownloadHistoryPDF={downloadCashboxHistoryPDF}
+                />
+
                 <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
                     <DialogTitle>
                         {editingId ? 'Editar Movimiento' : 'Nuevo Movimiento'}
@@ -711,8 +803,8 @@ function Finance({ menu }) {
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {finances.length > 0 ? (
-                                    finances.map((finance) => (
+                                {getMonthlyFinances().length > 0 ? (
+                                    getMonthlyFinances().map((finance) => (
                                         <TableRow key={finance.id}>
                                             <TableCell>
                                                 {finance.date instanceof Date
@@ -746,7 +838,7 @@ function Finance({ menu }) {
                                 ) : (
                                     <TableRow>
                                         <TableCell colSpan={6} align="center" className="no-data-cell">
-                                            No hay movimientos registrados
+                                            No hay movimientos registrados para este mes
                                         </TableCell>
                                     </TableRow>
                                 )}
