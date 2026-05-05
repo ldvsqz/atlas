@@ -128,6 +128,7 @@ function User({ menu }) {
       const UsersData = await UserService.getAll();
       setUsers(UsersData);
       setFilteredUsers(UsersData);
+      handleWaNotificationResponse(true, user); // Notify user via WhatsApp about the renewal
     }
   };
 
