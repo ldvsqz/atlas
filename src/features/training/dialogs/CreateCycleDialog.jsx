@@ -6,8 +6,10 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   Grid,
   MenuItem,
+  Switch,
   TextField,
 } from '@mui/material';
 import { Controller, useForm, useWatch } from 'react-hook-form';
@@ -27,7 +29,11 @@ function CreateCycleDialog({ open, onClose, onSubmit, saving = false, type, cycl
   const selectedType = useWatch({ control, name: 'type' });
 
   useEffect(() => {
-    reset(cycle || createCycleModel({ type, weeks: type === CYCLE_TYPES.MICRO ? 1 : 4 }));
+    reset({
+      ...createCycleModel({ type, weeks: type === CYCLE_TYPES.MICRO ? 1 : 4 }),
+      ...cycle,
+      public: cycle?.public ?? true,
+    });
   }, [cycle, open, reset, type]);
 
   useEffect(() => {
@@ -116,6 +122,23 @@ function CreateCycleDialog({ open, onClose, onSubmit, saving = false, type, cycl
                   minRows={3}
                   multiline
                   fullWidth
+                />
+              )}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <Controller
+              name="public"
+              control={control}
+              render={({ field }) => (
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={Boolean(field.value)}
+                      onChange={(event) => field.onChange(event.target.checked)}
+                    />
+                  }
+                  label="Permitir vista pública por link"
                 />
               )}
             />

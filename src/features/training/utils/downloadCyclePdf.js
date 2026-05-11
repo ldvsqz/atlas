@@ -33,18 +33,17 @@ const sanitizeFileName = (value) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'ciclo';
 
-export const downloadCyclePdf = async (cycle, exercises) => {
+export const downloadCyclePdf = async (cycle, exercises, providedDays = null) => {
   const doc = new jsPDF();
   const exerciseMap = new Map(exercises.map((exercise) => [exercise.id, exercise]));
   const createdAt = normalizeFirestoreDate(cycle.createdAt);
 
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.text(cycle.name || 'Ciclo de entrenamiento', 14, 16);
 
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.text(`Tipo: ${CYCLE_LABELS[cycle.type] || cycle.type}`, 14, 26);
-  doc.text(`Duración: ${cycle.weeks} semana${cycle.weeks === 1 ? '' : 's'}`, 14, 32);
-  doc.text(`Creado: ${createdAt?.isValid() ? createdAt.format('DD/MM/YYYY') : 'Sin fecha'}`, 14, 38);
+  doc.text(`Creado: ${createdAt?.isValid() ? createdAt.format('DD/MM/YYYY') : 'Sin fecha'}`, 14, 31);
 
   autoTable(doc, {
     startY: 46,
@@ -58,7 +57,7 @@ export const downloadCyclePdf = async (cycle, exercises) => {
   const descriptionTable = doc.lastAutoTable;
   const nextY = (descriptionTable?.finalY || 46) + 10;
 
-  const days = await TrainingService.getCycleDays(cycle.id, cycle.weeks);
+  const days = providedDays || await TrainingService.getCycleDays(cycle.id, cycle.weeks);
 
   if (days.length) {
     const groupedDays = groupDaysByWeek(days);
@@ -80,22 +79,20 @@ export const downloadCyclePdf = async (cycle, exercises) => {
       autoTable(doc, {
         startY: tableStartY + 4,
         theme: 'grid',
-        head: [['Día', BLOCK_LABELS.mainBlock, 'Notas principal', BLOCK_LABELS.extraBlock, 'Notas extra']],
+        head: [['Día', BLOCK_LABELS.shadowBlock, BLOCK_LABELS.mainBlock, BLOCK_LABELS.extraBlock]],
         body: weekDays.map((day) => [
           day.name || `Día ${day.dayIndex}`,
-          formatBlock(day.mainBlock, exerciseMap),
-          formatNotes(day.mainBlock),
-          formatBlock(day.extraBlock, exerciseMap),
-          formatNotes(day.extraBlock),
+          `${formatBlock(day.shadowBlock, exerciseMap)}\nNotas: ${formatNotes(day.shadowBlock)}`,
+          `${formatBlock(day.mainBlock, exerciseMap)}\nNotas: ${formatNotes(day.mainBlock)}`,
+          `${formatBlock(day.extraBlock, exerciseMap)}\nNotas: ${formatNotes(day.extraBlock)}`,
         ]),
         styles: { fontSize: 8, cellPadding: 2, valign: 'top' },
-        headStyles: { fillColor: [69, 90, 100] },
+        headStyles: { fillColor: [69, 90, 100], fontSize: 8 },
         columnStyles: {
-          0: { cellWidth: 24 },
-          1: { cellWidth: 42 },
-          2: { cellWidth: 38 },
-          3: { cellWidth: 42 },
-          4: { cellWidth: 38 },
+          0: { cellWidth: 20 },
+          1: { cellWidth: 55 },
+          2: { cellWidth: 58 },
+          3: { cellWidth: 55 },
         },
       });
 

@@ -3,6 +3,7 @@ import {
   deleteDoc,
   deleteField,
   doc,
+  documentId,
   getDoc,
   getDocs,
   orderBy,
@@ -66,6 +67,7 @@ class TrainingService {
       description: cycle.description?.trim() || '',
       weeks: Number(cycle.weeks),
       parentCycleId: cycle.parentCycleId || '',
+      public: cycle.public ?? true,
       startsAt: cycle.startsAt || null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -97,6 +99,12 @@ class TrainingService {
     const cycleRef = doc(db, CYCLES_COLLECTION, cycleId);
     const snapshot = await getDoc(cycleRef);
     return snapshot.exists() ? mapDoc(snapshot) : null;
+  }
+
+  async getPublicCycle(cycleId) {
+    const cycle = await this.getCycle(cycleId);
+    if (!cycle?.public) return null;
+    return cycle;
   }
 
   async getCyclesByType(type) {
@@ -163,7 +171,6 @@ class TrainingService {
     const legacyDocs = snapshot.docs.filter((dayDoc) => {
       const day = dayDoc.data();
       return Object.prototype.hasOwnProperty.call(day, 'warmupBlock')
-        || Object.prototype.hasOwnProperty.call(day, 'shadowBlock')
         || Object.prototype.hasOwnProperty.call(day, 'notes');
     });
 
@@ -172,7 +179,6 @@ class TrainingService {
         await commitInBatches(legacyDocs, (batch, dayDoc) => {
           batch.update(dayDoc.ref, {
             warmupBlock: deleteField(),
-            shadowBlock: deleteField(),
             notes: deleteField(),
             updatedAt: serverTimestamp(),
           });
@@ -189,6 +195,15 @@ class TrainingService {
     return days;
   }
 
+  async getPublicCycleDays(cycleId) {
+    const daysQuery = query(
+      collection(db, CYCLES_COLLECTION, cycleId, DAYS_SUBCOLLECTION),
+      orderBy('dayIndex', 'asc')
+    );
+    const snapshot = await getDocs(daysQuery);
+    return snapshot.docs.map((dayDoc) => normalizeCycleDay(mapDoc(dayDoc)));
+  }
+
   async getMicrocycleDays(cycleId) {
     return this.getCycleDays(cycleId, 1);
   }
@@ -200,6 +215,10 @@ class TrainingService {
       weekIndex: Number(dayData.weekIndex || 1),
       dayOfWeek: Number(dayData.dayOfWeek || dayData.dayIndex || dayId),
       name: dayData.name || `Día ${dayData.dayIndex || dayId}`,
+      shadowBlock: {
+        notes: dayData.shadowBlock?.notes || '',
+        exerciseIds: dayData.shadowBlock?.exerciseIds || [],
+      },
       mainBlock: {
         notes: dayData.mainBlock?.notes || '',
         exerciseIds: dayData.mainBlock?.exerciseIds || [],
@@ -210,7 +229,6 @@ class TrainingService {
       },
       notes: deleteField(),
       warmupBlock: deleteField(),
-      shadowBlock: deleteField(),
       updatedAt: serverTimestamp(),
     };
     await updateDoc(dayRef, payload);
@@ -240,6 +258,23 @@ class TrainingService {
     const exercisesQuery = query(collection(db, EXERCISES_COLLECTION), orderBy('name', 'asc'));
     const snapshot = await getDocs(exercisesQuery);
     return snapshot.docs.map(mapDoc);
+  }
+
+  async getExercisesByIds(exerciseIds = []) {
+    const uniqueIds = [...new Set(exerciseIds.filter(Boolean).map(String))];
+    if (!uniqueIds.length) return [];
+
+    const chunks = Array.from({ length: Math.ceil(uniqueIds.length / 10) }, (_, index) =>
+      uniqueIds.slice(index * 10, (index + 1) * 10)
+    );
+
+    const snapshots = await Promise.all(
+      chunks.map((ids) =>
+        getDocs(query(collection(db, EXERCISES_COLLECTION), where(documentId(), 'in', ids)))
+      )
+    );
+
+    return snapshots.flatMap((snapshot) => snapshot.docs.map(mapDoc));
   }
 
   async updateExercise(exerciseId, data) {
