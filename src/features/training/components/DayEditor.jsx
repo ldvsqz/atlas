@@ -30,11 +30,15 @@ function DayEditor({ cycleId, weeks = 1, exercises }) {
   const [drafts, setDrafts] = useState({});
 
   useEffect(() => {
-    const nextDrafts = {};
-    days.forEach((day) => {
-      nextDrafts[day.id] = normalizeDay(day);
+    setDrafts((currentDrafts) => {
+      const nextDrafts = { ...currentDrafts };
+      days.forEach((day) => {
+        if (!nextDrafts[day.id]) {
+          nextDrafts[day.id] = normalizeDay(day);
+        }
+      });
+      return nextDrafts;
     });
-    setDrafts(nextDrafts);
   }, [days]);
 
   const updateDraft = (dayId, field, value) => {
@@ -162,26 +166,30 @@ function DayEditor({ cycleId, weeks = 1, exercises }) {
 
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <Button
+                    type="button"
                     variant="contained"
                     startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
-                    onClick={() => updateDay(day.id, {
-                      dayIndex: draft.dayIndex,
-                      weekIndex: draft.weekIndex,
-                      dayOfWeek: draft.dayOfWeek,
-                      name: draft.name,
-                      shadowBlock: {
-                        notes: draft.shadowBlock?.notes || '',
-                        exerciseIds: draft.shadowBlock?.exerciseIds || [],
-                      },
-                      mainBlock: {
-                        notes: draft.mainBlock?.notes || '',
-                        exerciseIds: draft.mainBlock?.exerciseIds || [],
-                      },
-                      extraBlock: {
-                        notes: draft.extraBlock?.notes || '',
-                        exerciseIds: draft.extraBlock?.exerciseIds || [],
-                      },
-                    })}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      updateDay(day.id, {
+                        dayIndex: draft.dayIndex,
+                        weekIndex: draft.weekIndex,
+                        dayOfWeek: draft.dayOfWeek,
+                        name: draft.name,
+                        shadowBlock: {
+                          notes: draft.shadowBlock?.notes || '',
+                          exerciseIds: draft.shadowBlock?.exerciseIds || [],
+                        },
+                        mainBlock: {
+                          notes: draft.mainBlock?.notes || '',
+                          exerciseIds: draft.mainBlock?.exerciseIds || [],
+                        },
+                        extraBlock: {
+                          notes: draft.extraBlock?.notes || '',
+                          exerciseIds: draft.extraBlock?.exerciseIds || [],
+                        },
+                      });
+                    }}
                     disabled={isSaving}
                   >
                     Guardar día

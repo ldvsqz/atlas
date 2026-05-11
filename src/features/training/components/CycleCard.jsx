@@ -33,23 +33,15 @@ function CycleCard({ cycle, exercises, onEdit, onDelete }) {
   const createdAt = normalizeFirestoreDate(cycle.createdAt);
   const publicUrl = getPublicCycleUrl(cycle.id);
 
-  const copyPublicLink = async () => {
+  const copyPublicLink = async (e) => {
+    e.preventDefault();
     if (cycle.public === false) {
       showSnackbar('Activa la vista pública del ciclo antes de compartirlo', 'warning');
       return;
     }
 
     try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(publicUrl);
-      } else {
-        const input = document.createElement('input');
-        input.value = publicUrl;
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand('copy');
-        document.body.removeChild(input);
-      }
+      await navigator.clipboard.writeText(publicUrl);
       showSnackbar('Link público copiado', 'success');
     } catch (error) {
       console.error('Error copying public cycle link:', error);
@@ -174,6 +166,7 @@ function CycleCard({ cycle, exercises, onEdit, onDelete }) {
       >
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
           <Button
+            type="button"
             variant="contained"
             fullWidth
             endIcon={<ExpandMoreIcon sx={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 160ms ease' }} />}
@@ -183,6 +176,7 @@ function CycleCard({ cycle, exercises, onEdit, onDelete }) {
             {expanded ? 'Ocultar días' : 'Ver días'}
           </Button>
           <Button
+            type="button"
             variant="outlined"
             fullWidth
             startIcon={<OpenInNewIcon />}
@@ -195,6 +189,7 @@ function CycleCard({ cycle, exercises, onEdit, onDelete }) {
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
           <Button
+            type="button"
             variant="outlined"
             fullWidth
             startIcon={<ContentCopyIcon />}
@@ -204,10 +199,14 @@ function CycleCard({ cycle, exercises, onEdit, onDelete }) {
             Compartir
           </Button>
           <Button
+            type="button"
             variant="outlined"
             fullWidth
             startIcon={<DownloadIcon />}
-            onClick={handleDownload}
+            onClick={(e) => {
+              e.preventDefault();
+              handleDownload();
+            }}
             disabled={downloading}
             sx={{ flex: 1 }}
           >

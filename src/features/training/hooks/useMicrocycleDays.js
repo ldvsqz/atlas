@@ -33,7 +33,12 @@ export const useMicrocycleDays = (cycleId, weeks = 1, enabled = true) => {
       setSavingDayId(String(dayId));
       await TrainingService.updateCycleDay(cycleId, dayId, dayData);
       showSnackbar('Día actualizado correctamente', 'success');
-      await fetchDays();
+      // Actualizar el día localmente en lugar de re-fetch todos los días
+      setDays((currentDays) =>
+        currentDays.map((day) =>
+          day.id === String(dayId) ? { ...day, ...dayData } : day
+        )
+      );
     } catch (error) {
       console.error('Error updating day:', error);
       showSnackbar('Error al actualizar el día', 'error');
