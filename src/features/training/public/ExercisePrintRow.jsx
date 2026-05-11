@@ -1,6 +1,5 @@
 import React from 'react';
 import { Box, Chip, Stack, Typography } from '@mui/material';
-import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 
 function ExercisePrintRow({ exercise, index }) {
   const exerciseName = exercise?.name || 'Ejercicio no encontrado';
@@ -24,11 +23,6 @@ function ExercisePrintRow({ exercise, index }) {
           <Typography variant="subtitle2" fontWeight={900} sx={{ overflowWrap: 'anywhere' }}>
             {exerciseName}
           </Typography>
-          <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap" sx={{ mt: 0.75 }}>
-            {exercise?.category && <Chip label={exercise.category} size="small" variant="outlined" />}
-            {exercise?.intensity && <Chip label={exercise.intensity} size="small" variant="outlined" />}
-            {exercise?.equipment && <Chip label={exercise.equipment} size="small" icon={<FitnessCenterIcon />} variant="outlined" />}
-          </Stack>
           {notes && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.7 }}>
               {notes}
