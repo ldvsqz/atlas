@@ -10,6 +10,7 @@ import {
   Divider,
   IconButton,
   Stack,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -17,16 +18,53 @@ import DownloadIcon from '@mui/icons-material/Download';
 import EditIcon from '@mui/icons-material/Edit';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import EventNoteIcon from '@mui/icons-material/EventNote';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { CYCLE_LABELS, normalizeFirestoreDate } from '../models/trainingModels';
 import DayEditor from './DayEditor';
 import { downloadCyclePdf } from '../utils/downloadCyclePdf';
 import { useSnackbar } from '../../../Components/snackbar/AtlasSnackbar';
+import { getPublicCycleUrl } from '../public/publicCycleUtils';
 
 function CycleCard({ cycle, exercises, onEdit, onDelete }) {
   const [expanded, setExpanded] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const { showSnackbar } = useSnackbar();
   const createdAt = normalizeFirestoreDate(cycle.createdAt);
+  const publicUrl = getPublicCycleUrl(cycle.id);
+
+  const copyPublicLink = async () => {
+    if (cycle.public === false) {
+      showSnackbar('Activa la vista pública del ciclo antes de compartirlo', 'warning');
+      return;
+    }
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(publicUrl);
+      } else {
+        const input = document.createElement('input');
+        input.value = publicUrl;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+      }
+      showSnackbar('Link público copiado', 'success');
+    } catch (error) {
+      console.error('Error copying public cycle link:', error);
+      showSnackbar('No se pudo copiar el link', 'error');
+    }
+  };
+
+  const openPublicCycle = () => {
+    if (cycle.public === false) {
+      showSnackbar('Activa la vista pública del ciclo para verlo por link', 'warning');
+      return;
+    }
+
+    window.open(publicUrl, '_blank', 'noopener,noreferrer');
+  };
 
   const handleDownload = async () => {
     try {
@@ -44,7 +82,7 @@ function CycleCard({ cycle, exercises, onEdit, onDelete }) {
   return (
     <Card variant="outlined" sx={{ borderRadius: 1, height: '100%' }}>
       <CardContent>
-        <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'stretch', sm: 'flex-start' }} justifyContent="space-between" spacing={2}>
+        <Stack spacing={2}>
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="h6" fontWeight={800} sx={{ overflowWrap: 'anywhere' }}>
               {cycle.name}
@@ -53,38 +91,129 @@ function CycleCard({ cycle, exercises, onEdit, onDelete }) {
               {cycle.description || 'Sin descripción'}
             </Typography>
           </Box>
-          <Chip label={CYCLE_LABELS[cycle.type]} size="small" />
-        </Stack>
 
-        <Stack direction="row" spacing={1} sx={{ mt: 2, flexWrap: 'wrap', rowGap: 1 }}>
-          <Chip icon={<EventNoteIcon />} label={`${cycle.weeks} semana${cycle.weeks === 1 ? '' : 's'}`} size="small" variant="outlined" />
-          {createdAt?.isValid() && (
-            <Chip label={createdAt.format('DD/MM/YYYY')} size="small" variant="outlined" />
-          )}
+          <Stack
+            direction="row"
+            spacing={1}
+            useFlexGap
+            flexWrap="wrap"
+            alignItems="center"
+            sx={{
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 1,
+              p: 1,
+              bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'grey.50',
+            }}
+          >
+            <Chip label={CYCLE_LABELS[cycle.type]} size="small" />
+            <Chip icon={<EventNoteIcon />} label={`${cycle.weeks} semana${cycle.weeks === 1 ? '' : 's'}`} size="small" variant="outlined" />
+            {createdAt?.isValid() && (
+              <Chip label={createdAt.format('DD/MM/YYYY')} size="small" variant="outlined" />
+            )}
+
+            <Box sx={{ flexGrow: 1, minWidth: 8 }} />
+
+            <Stack direction="row" spacing={0.75} sx={{ flexShrink: 0 }}>
+              <Tooltip title="Editar ciclo">
+                <IconButton
+                  aria-label="Editar ciclo"
+                  onClick={() => onEdit(cycle)}
+                  size="medium"
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    border: '1px solid',
+                    borderColor: 'primary.main',
+                    bgcolor: 'background.paper',
+                    color: 'primary.main',
+                    '&:hover': {
+                      bgcolor: 'action.hover',
+                    },
+                  }}
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Eliminar ciclo">
+                <IconButton
+                  aria-label="Eliminar ciclo"
+                  onClick={() => onDelete(cycle.id)}
+                  size="medium"
+                  color="error"
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    border: '1px solid',
+                    borderColor: 'error.main',
+                    bgcolor: 'background.paper',
+                    '&:hover': {
+                      bgcolor: 'error.main',
+                      color: 'error.contrastText',
+                    },
+                  }}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+          </Stack>
         </Stack>
       </CardContent>
 
       <Divider />
 
-      <CardActions sx={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-        <Box sx={{ display: 'flex', gap: 0.5 }}>
-          <IconButton aria-label="Editar ciclo" onClick={() => onEdit(cycle)}>
-            <EditIcon />
-          </IconButton>
-          <IconButton aria-label="Eliminar ciclo" onClick={() => onDelete(cycle.id)}>
-            <DeleteIcon />
-          </IconButton>
-          <IconButton aria-label="Descargar ciclo" onClick={handleDownload} disabled={downloading}>
-            <DownloadIcon />
-          </IconButton>
-        </Box>
-        <Button
-          endIcon={<ExpandMoreIcon sx={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 160ms ease' }} />}
-          onClick={() => setExpanded((current) => !current)}
-          sx={{ ml: { xs: 0, sm: 'auto' } }}
-        >
-          Días
-        </Button>
+      <CardActions
+        sx={{
+          alignItems: 'stretch',
+          flexDirection: 'column',
+          gap: 1.25,
+          p: 2,
+          pt: 1.5,
+        }}
+      >
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+          <Button
+            variant="contained"
+            fullWidth
+            endIcon={<ExpandMoreIcon sx={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 160ms ease' }} />}
+            onClick={() => setExpanded((current) => !current)}
+            sx={{ flex: 1 }}
+          >
+            {expanded ? 'Ocultar días' : 'Ver días'}
+          </Button>
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<OpenInNewIcon />}
+            onClick={openPublicCycle}
+            sx={{ flex: 1 }}
+          >
+            Ver ciclo
+          </Button>
+        </Stack>
+
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<ContentCopyIcon />}
+            onClick={copyPublicLink}
+            sx={{ flex: 1 }}
+          >
+            Compartir
+          </Button>
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<DownloadIcon />}
+            onClick={handleDownload}
+            disabled={downloading}
+            sx={{ flex: 1 }}
+          >
+            {downloading ? 'Generando' : 'PDF'}
+          </Button>
+        </Stack>
       </CardActions>
 
       <Collapse in={expanded} timeout="auto" unmountOnExit>

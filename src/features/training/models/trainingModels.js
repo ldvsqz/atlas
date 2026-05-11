@@ -85,6 +85,7 @@ export const createDefaultCycleDays = (weeks = 1) =>
         dayIndex: sequentialDay,
         name: TRAINING_WEEK_DAYS[dayIndex],
         mainBlock: createEmptyBlock(),
+        shadowBlock: createEmptyBlock(),
         extraBlock: createEmptyBlock(),
         createdAt: null,
         updatedAt: null,
@@ -110,6 +111,8 @@ export const normalizeCycleDay = (day) => {
     name: day.name || TRAINING_WEEK_DAYS[dayOfWeek - 1] || `Día ${dayOfWeek}`,
     mainBlock: createEmptyBlock(),
     ...('mainBlock' in day ? { mainBlock: { ...createEmptyBlock(), ...day.mainBlock } } : {}),
+    shadowBlock: createEmptyBlock(),
+    ...('shadowBlock' in day ? { shadowBlock: { ...createEmptyBlock(), ...day.shadowBlock } } : {}),
     extraBlock: createEmptyBlock(),
     ...('extraBlock' in day ? { extraBlock: { ...createEmptyBlock(), ...day.extraBlock } } : {}),
   };
@@ -121,6 +124,7 @@ export const createCycleModel = ({
   description = '',
   weeks = 4,
   parentCycleId = '',
+  public: isPublic = true,
   startsAt = null,
 } = {}) => ({
   id: '',
@@ -129,6 +133,7 @@ export const createCycleModel = ({
   description,
   weeks: Number(weeks),
   parentCycleId,
+  public: isPublic,
   startsAt,
   createdAt: null,
   updatedAt: null,

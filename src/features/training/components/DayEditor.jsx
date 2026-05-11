@@ -8,6 +8,7 @@ import {
   CircularProgress,
   Grid,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -92,7 +93,8 @@ function DayEditor({ cycleId, weeks = 1, exercises }) {
                   {draft.name || `Día ${draft.dayIndex}`}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {draft.mainBlock?.exerciseIds?.length || 0} ejercicios en bloque principal
+                  {(draft.mainBlock?.exerciseIds?.length || 0)
+                    + (draft.extraBlock?.exerciseIds?.length || 0)} ejercicios planificados
                 </Typography>
               </Box>
             </AccordionSummary>
@@ -112,18 +114,30 @@ function DayEditor({ cycleId, weeks = 1, exercises }) {
                     </Typography>
                   </Box>
                 <Box
-                    key={BLOCK_LABELS.warmupBlock?.toLowerCase()}
-                    sx={{
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      borderRadius: 1,
-                      p: 2,
-                    }}
-                  >
-                    <Typography variant="overline" color="text.secondary">
-                      Bloque de {BLOCK_LABELS.shadowBlock?.toLowerCase()}
-                    </Typography>
-                  </Box>
+                  key="shadowBlock"
+                  sx={{
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    p: 2,
+                  }}
+                >
+                  <Typography variant="overline" color="text.secondary" sx={{ mb: 1 }}>
+                    {BLOCK_LABELS.shadowBlock}
+                  </Typography>
+                  <TextField
+                    label="Notas sombra"
+                    value={draft.shadowBlock?.notes || ''}
+                    onChange={(event) => updateBlock(day.id, 'shadowBlock', {
+                      ...draft.shadowBlock,
+                      notes: event.target.value,
+                    })}
+                    disabled={isSaving}
+                    minRows={2}
+                    multiline
+                    fullWidth
+                  />
+                </Box>
                 {EDITABLE_DAY_BLOCK_KEYS.map((blockKey) => (
                   <Box
                     key={blockKey}
@@ -155,6 +169,10 @@ function DayEditor({ cycleId, weeks = 1, exercises }) {
                       weekIndex: draft.weekIndex,
                       dayOfWeek: draft.dayOfWeek,
                       name: draft.name,
+                      shadowBlock: {
+                        notes: draft.shadowBlock?.notes || '',
+                        exerciseIds: draft.shadowBlock?.exerciseIds || [],
+                      },
                       mainBlock: {
                         notes: draft.mainBlock?.notes || '',
                         exerciseIds: draft.mainBlock?.exerciseIds || [],

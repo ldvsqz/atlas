@@ -1,0 +1,33 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function publicCycle(cycleId) {
+      return get(/databases/$(database)/documents/cycles/$(cycleId)).data.public == true;
+    }
+
+    match /cycles/{cycleId} {
+      allow read: if signedIn() || resource.data.public == true;
+      allow write: if signedIn();
+
+      match /days/{dayId} {
+        allow read: if signedIn() || publicCycle(cycleId);
+        allow write: if signedIn();
+      }
+    }
+
+    match /exercises/{exerciseId} {
+      allow read: if true;
+      allow write: if signedIn();
+    }
+
+    match /{document=**} {
+      allow read, write: if signedIn();
+    }
+  }
+}
+

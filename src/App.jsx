@@ -15,6 +15,7 @@ import Aboutus from "./Pages/Aboutus/Aboutus";
 import ResetPassword from './Pages/ResetPassword/ResetPassword';
 import Finance from "./Pages/Finance/Finance";
 import TrainingPage from "./features/training/pages/TrainingPage";
+import PublicCycleView from "./features/training/public/PublicCycleView";
 import packageInfo from '../package.json';
 
 
@@ -53,6 +54,8 @@ function App() {
           <Route path="/" element={<Login />} />
           <Route path="/reset" element={<ResetPassword />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/public/cycle/:id" element={<PublicCycleView />} />
+          <Route path="/cycle/:id" element={<PublicCycleView />} />
           <Route path="/events" element={<Events menu={getMenu("Eventos")} />} />
           <Route path="/users" element={<Users menu={getMenu("Personas")} />} />
           <Route path="/finance" element={<Finance menu={getMenu("Finanzas")} />} />
@@ -75,7 +78,11 @@ function RouteTracker({ children }) {
 
   useEffect(() => {
     // No guardar rutas de login, reset o register
-    if (!["/", "/login", "/reset", "/register"].includes(location.pathname)) {
+    if (
+      !["/", "/login", "/reset", "/register"].includes(location.pathname)
+      && !location.pathname.startsWith('/public/')
+      && !location.pathname.startsWith('/cycle/')
+    ) {
       localStorage.setItem("LAST_ROUTE", location.pathname + location.search);
     }
   }, [location]);
