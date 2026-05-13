@@ -128,20 +128,22 @@ function User({ menu }) {
       const UsersData = await UserService.getAll();
       setUsers(UsersData);
       setFilteredUsers(UsersData);
-      handleWaNotificationResponse(true, user); // Notify user via WhatsApp about the renewal
+      handleWaNotificationResponse(true, user);
     }
   };
 
   const handleWaNotificationResponse = (response, user) => {
-    if (response) {
-     const message = util.selectMembershipMessage(user.name, user.until);
-     if(user.phone){
-     util.openWAChat(user.phone, message);
-    } else {
-      showSnackbar('El usuario no tiene un número telefónico registrado.', 'error');
-    }
+    userService.getById(user.uid).then((_user) => {
+      if (response) {
+        const message = util.selectMembershipMessage(_user.name, _user.until);
+        if(_user.phone){
+          util.openWAChat(_user.phone, message);
+        } else {
+          showSnackbar('El usuario no tiene un número telefónico registrado.', 'error');
+        }
+      }
+    });
   }
-}
 
   const handleOpenAddUserModal = () => {
     setOpenAddUserModal(true);

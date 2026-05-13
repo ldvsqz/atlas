@@ -6,14 +6,13 @@ import {
   Box,
   Button,
   CircularProgress,
-  Grid,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SaveIcon from '@mui/icons-material/Save';
-import { BLOCK_LABELS, DAY_FLOW_STEPS, EDITABLE_DAY_BLOCK_KEYS, createEmptyBlock } from '../models/trainingModels';
+import { BLOCK_LABELS, EDITABLE_DAY_BLOCK_KEYS, createEmptyBlock } from '../models/trainingModels';
 import { useMicrocycleDays } from '../hooks/useMicrocycleDays';
 import MainBlockEditor from './MainBlockEditor';
 
@@ -225,7 +224,6 @@ function DayEditor({ cycleId, weeks = 1, exercises }) {
         return (
           <Accordion
             key={weekIndex}
-            defaultExpanded={Number(weekIndex) === 1}
             disableGutters
             sx={{ borderRadius: 1, '&:before': { display: 'none' } }}
           >

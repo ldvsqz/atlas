@@ -35,14 +35,15 @@ function TrainingBlock({ blockKey, block, exerciseMap }) {
               key={`${blockKey}-${exerciseId}-${index}`}
               exercise={exerciseMap.get(String(exerciseId))}
               index={index}
+              blockKey={blockKey}
             />
           ))
         ) : (
-          <Typography variant="body2" color="text.secondary">
-            {blockKey === 'warmupBlock'
-              ? 'Calentamiento general indicado por el entrenador.'
-              : 'Sin ejercicios asignados.'}
-          </Typography>
+          blockKey === 'warmupBlock' ? (
+            <Typography variant="body2" color="text.secondary">
+              Calentamiento general indicado por el entrenador.
+            </Typography>
+          ) : null
         )}
 
         {hasNotes && (

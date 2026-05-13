@@ -151,7 +151,15 @@ function PublicCycleView() {
           }}
         >
           <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flexShrink: 0 }}>
-            <Button size="small" startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)}>
+            <Button
+              size="small"
+              startIcon={<ArrowBackIcon />}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.close();
+                }
+              }}
+            >
               Volver
             </Button>
             <Button size="small" startIcon={<ContentCopyIcon />} onClick={handleCopyLink} disabled={!id}>
