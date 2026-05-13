@@ -102,30 +102,103 @@ function ExerciseCatalog({ exercises, loading, saving, createExercise, updateExe
         <>
           <Stack spacing={1.5} sx={{ display: { xs: 'flex', sm: 'none' } }}>
             {filteredExercises.map((exercise) => (
-              <Card variant="outlined" sx={{ borderRadius: 1 }} key={exercise.id}>
+              <Card
+                key={exercise.id}
+                variant="outlined"
+                sx={{
+                  borderRadius: 2,
+                  width: '100%',
+                  overflow: 'visible',
+                }}
+              >
                 <CardContent sx={{ pb: 1 }}>
-                  <Typography fontWeight={800} sx={{ overflowWrap: 'anywhere' }}>
+                  <Typography
+                    fontWeight={800}
+                    sx={{
+                      overflowWrap: 'anywhere',
+                    }}
+                  >
                     {exercise.name}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 0.5 }}
+                  >
                     {exercise.description || 'Sin descripción'}
                   </Typography>
-                  <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap', rowGap: 1 }}>
-                    <Chip label={exercise.category} size="small" variant="outlined" />
-                    <Chip label={exercise.intensity} size="small" />
-                    <Chip label={exercise.equipment} size="small" variant="outlined" />
-                  </Stack>
+
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 1,
+                      mt: 1,
+                    }}
+                  >
+                    <Chip
+                      label={exercise.category}
+                      size="small"
+                      variant="outlined"
+                    />
+
+                    <Chip
+                      label={exercise.intensity}
+                      size="small"
+                    />
+
+                    <Chip
+                      label={exercise.equipment}
+                      size="small"
+                      variant="outlined"
+                    />
+                  </Box>
                 </CardContent>
-                <CardActions sx={{ justifyContent: 'flex-end' }}>
-                  <IconButton aria-label="Editar ejercicio" onClick={() => openEditDialog(exercise)}>
-                    <EditIcon />
+
+                <CardActions
+                  sx={{
+                    px: 1,
+                    pb: 1,
+                    pt: 0,
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: 1,
+                    width: '100%',
+                  }}
+                >
+                  <IconButton
+                    fullWidth
+                    aria-label="Editar ejercicio"
+                    onClick={() => openEditDialog(exercise)}
+                    sx={{
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 2,
+                      width: '100%',
+                    }}
+                  >
+                    <EditIcon fontSize="small" />
                   </IconButton>
-                  <IconButton aria-label="Eliminar ejercicio" onClick={() => setExerciseToDelete(exercise)}>
-                    <DeleteIcon />
+
+                  <IconButton
+                    fullWidth
+                    aria-label="Eliminar ejercicio"
+                    onClick={() => setExerciseToDelete(exercise)}
+                    color="error"
+                    sx={{
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 2,
+                      width: '100%',
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" />
                   </IconButton>
                 </CardActions>
               </Card>
             ))}
+
             {!filteredExercises.length && (
               <Paper variant="outlined" sx={{ borderRadius: 1, py: 5, px: 2, textAlign: 'center' }}>
                 <Typography color="text.secondary">No hay ejercicios para mostrar.</Typography>
