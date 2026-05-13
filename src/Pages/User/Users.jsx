@@ -126,21 +126,26 @@ function User({ menu }) {
       });
       // Refresh the users list
       const UsersData = await UserService.getAll();
+      const activeUsers = UsersData.filter((user) => util.isMembershipDisplayable(user.until));
       setUsers(UsersData);
-      setFilteredUsers(UsersData);
+      setFilteredUsers(activeUsers);
       handleWaNotificationResponse(true, user);
     }
   };
 
   const handleWaNotificationResponse = (response, user) => {
     if (response) {
-    userService.getById(user.uid).then((_user) => {
+    userService.get(user.uid).then((_user) => {
+      console.log(_user);
         const message = util.selectMembershipMessage(_user.name, _user.until);
         if(_user.phone){
           util.openWAChat(_user.phone, message);
         } else {
           showSnackbar('El usuario no tiene un número telefónico registrado.', 'error');
         }
+      }).catch((error) => {
+        console.error('Error fetching user for WhatsApp notification:', error);
+        showSnackbar('No pudimos enviar la notificación. Intenta de nuevo.', 'error');
       });
     }
   }
