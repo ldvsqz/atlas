@@ -31,3 +31,8 @@
   .login div {
     margin-top: 7px;
   }
+
+  a {
+    color: #4285f4;
+    text-decoration: none;
+  }
