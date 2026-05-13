@@ -124,10 +124,10 @@ class Util {
         const fullNumber = `${countryCode}${cleaned}`;
         const text = encodeURIComponent(message);
 
-        const appUrl = `whatsapp://send?phone=${fullNumber}&text=${text}`;
+        // const appUrl = `whatsapp://send?phone=${fullNumber}&text=${text}`;
         const webUrl = `https://wa.me/${fullNumber}?text=${text}`;
 
-        window.location.href = appUrl;
+        // window.location.href = appUrl;
 
         setTimeout(() => {
             window.open(webUrl, "_blank");
