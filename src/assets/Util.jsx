@@ -141,11 +141,11 @@ class Util {
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
         if (diffDays < 0) {
-            return `Hola, ${name}. Esperamos que estés muy bien � tu membresía venció el ${membershipDate.toLocaleDateString()} te invitamos a renovarla para continuar con tus entrenamientos 💪`;
+            return `Hola, ${name}. Esperamos que estés muy bien 🫡 tu membresía venció el ${membershipDate.toLocaleDateString()} te invitamos a renovarla para continuar con tus entrenamientos 🥊`;
         } else if (diffDays <= 7) {
-            return `Hola, ${name}. Esperamos que estés muy bien 🙂 tu membresía está por vencer el ${membershipDate.toLocaleDateString()} podés renovarla en cualquier momento para seguir entrenando 💪`;
+            return `Hola, ${name}. Esperamos que estés muy bien 🫡 tu membresía está por vencer el ${membershipDate.toLocaleDateString()} podés renovarla en cualquier momento para seguir entrenando 🥊`;
         } else {
-            return `Hola, ${name}. Esperamos que estés muy bien 🙂 tu membresía ha sido renovada ✅ ya podés continuar entrenando con normalidad 💪`;
+            return `Hola, ${name}. Esperamos que estés muy bien 🫡 tu membresía ha sido renovada ✅ ya podés continuar entrenando con normalidad 🥊`;
         }
     }
 
