@@ -1,9 +1,14 @@
 import React from 'react';
 import { Box, Chip, Stack, Typography } from '@mui/material';
 
-function ExercisePrintRow({ exercise, index }) {
+function ExercisePrintRow({ exercise, index, blockKey }) {
   const exerciseName = exercise?.name || 'Ejercicio no encontrado';
-  const notes = exercise?.notes || exercise?.note || exercise?.description || '';
+  const noteText = exercise?.notes || exercise?.note;
+  const descriptionText = exercise?.description;
+  const notes =
+    blockKey === 'mainBlock' || blockKey === 'extraBlock'
+      ? noteText || ''
+      : noteText || descriptionText || '';
 
   return (
     <Box

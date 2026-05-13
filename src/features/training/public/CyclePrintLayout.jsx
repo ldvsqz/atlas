@@ -1,13 +1,62 @@
-import React, { forwardRef, useMemo } from 'react';
-import { Box, Chip, Divider, Stack, Typography } from '@mui/material';
+import React, { forwardRef, useEffect, useMemo, useState } from 'react';
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Box,
+  Chip,
+  Divider,
+  Stack,
+  Typography,
+} from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LayersIcon from '@mui/icons-material/Layers';
 import { CYCLE_LABELS } from '../models/trainingModels';
 import DayPrintCard from './DayPrintCard';
 import { createExerciseMap, groupDaysByWeek } from './publicCycleUtils';
 
+const STORAGE_KEY = 'PUBLIC_CYCLE_WEEK_EXPANSION_STATE';
+
+function loadWeekExpansionState(cycleId) {
+  if (!cycleId || typeof window === 'undefined') return null;
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored)[cycleId] || null : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function saveWeekExpansionState(cycleId, expandedWeeks) {
+  if (!cycleId || typeof window === 'undefined') return;
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    const current = stored ? JSON.parse(stored) : {};
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...current,
+      [cycleId]: expandedWeeks,
+    }));
+  } catch (error) {
+    // ignore storage errors
+  }
+}
+
 const CyclePrintLayout = forwardRef(function CyclePrintLayout({ cycle, days, exercises }, ref) {
   const groupedDays = useMemo(() => groupDaysByWeek(days), [days]);
   const exerciseMap = useMemo(() => createExerciseMap(exercises), [exercises]);
+  const [expandedWeeks, setExpandedWeeks] = useState({});
+
+  useEffect(() => {
+    if (!cycle?.id) return;
+    const storedState = loadWeekExpansionState(cycle.id);
+    setExpandedWeeks(storedState || {});
+  }, [cycle?.id]);
+
+  useEffect(() => {
+    if (!cycle?.id) return;
+    saveWeekExpansionState(cycle.id, expandedWeeks);
+  }, [cycle?.id, expandedWeeks]);
+
   const plannedExercises = days.reduce(
     (total, day) =>
       total
@@ -106,21 +155,45 @@ const CyclePrintLayout = forwardRef(function CyclePrintLayout({ cycle, days, exe
                   pageBreakInside: 'avoid',
                 }}
               >
-                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-                  <Typography variant="h5" fontWeight={900}>
-                    Semana {weekIndex}
-                  </Typography>
-                  <Divider sx={{ flex: 1 }} />
-                  <Typography variant="body2" color="text.secondary">
-                    {weekDays.length} días
-                  </Typography>
-                </Stack>
-
-                <Stack spacing={2}>
-                  {weekDays.map((day) => (
-                    <DayPrintCard key={day.id || day.dayIndex} day={day} exerciseMap={exerciseMap} />
-                  ))}
-                </Stack>
+                <Accordion
+                  expanded={expandedWeeks[weekIndex] === true}
+                  onChange={() =>
+                    setExpandedWeeks((current) => ({
+                      ...current,
+                      [weekIndex]: !current[weekIndex],
+                    }))
+                  }
+                  disableGutters
+                  square
+                  sx={{
+                    borderRadius: 1,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    '&::before': { display: 'none' },
+                    bgcolor: 'background.paper',
+                  }}
+                >
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Box sx={{ minWidth: 0, width: '100%' }}>
+                      <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%' }}>
+                        <Typography variant="h5" fontWeight={900}>
+                          Semana {weekIndex}
+                        </Typography>
+                        <Divider sx={{ flex: 1 }} />
+                        <Typography variant="body2" color="text.secondary">
+                          {weekDays.length} días
+                        </Typography>
+                      </Stack>
+                    </Box>
+                  </AccordionSummary>
+                  <AccordionDetails sx={{ p: 0 }}>
+                    <Stack spacing={2} sx={{ p: 2 }}>
+                      {weekDays.map((day) => (
+                        <DayPrintCard key={day.id || day.dayIndex} day={day} exerciseMap={exerciseMap} />
+                      ))}
+                    </Stack>
+                  </AccordionDetails>
+                </Accordion>
               </Box>
             ))}
           </Stack>

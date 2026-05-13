@@ -13,8 +13,8 @@ function MainBlockEditor({ block, exercises, onChange, disabled = false }) {
   };
 
   return (
-    <Box>
-      <Stack spacing={2}>
+    <Box sx={{ mt: 1 }}>
+      <Stack spacing={1.5}>
         <ExerciseSelector
           exercises={exercises}
           value={currentBlock.exerciseIds || []}
