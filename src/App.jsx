@@ -16,6 +16,7 @@ import ResetPassword from './Pages/ResetPassword/ResetPassword';
 import Finance from "./Pages/Finance/Finance";
 import TrainingPage from "./features/training/pages/TrainingPage";
 import PublicCycleView from "./features/training/public/PublicCycleView";
+import GymLayoutPage from "./features/gymLayout/pages/GymLayoutPage";
 import packageInfo from '../package.json';
 
 
@@ -60,6 +61,7 @@ function App() {
           <Route path="/users" element={<Users menu={getMenu("Personas")} />} />
           <Route path="/finance" element={<Finance menu={getMenu("Finanzas")} />} />
           <Route path="/training" element={<TrainingPage menu={getMenu("Planificación")} />} />
+          <Route path="/gym-layout" element={<GymLayoutPage menu={getMenu("Plano del gimnasio")} />} />
           <Route path="/settings" element={<Settings menu={getMenu("Configuración")} />} />
           <Route path="/exercises" element={<Exercises menu={getMenu("Ejercicios")} />} />
           <Route path="/aboutus" element={<Aboutus menu={getMenu("Sobre nosotros")} />} />

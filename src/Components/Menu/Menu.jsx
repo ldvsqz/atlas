@@ -24,6 +24,7 @@ import InfoIcon from '@mui/icons-material/Info';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
+import GridOnIcon from '@mui/icons-material/GridOn';
 import ToggleButton from '@mui/material/ToggleButton';
 import { auth } from "../../../Firebase/authFunctions";
 import "./Menu.css";
@@ -128,6 +129,16 @@ function Menu({ header, version,toggleThemeMode, themeMode }) {
               <FitnessCenterIcon />
             </ListItemIcon>
             <ListItemText primary={"Planificación"} />
+          </ListItemButton>
+        </ListItem>
+        }
+
+        {currentRol == 0 && <ListItem key={"Plano del gimnasio"} disablePadding>
+          <ListItemButton component={Link} to="/gym-layout">
+            <ListItemIcon>
+              <GridOnIcon />
+            </ListItemIcon>
+            <ListItemText primary={"Plano del gimnasio"} />
           </ListItemButton>
         </ListItem>
         }
