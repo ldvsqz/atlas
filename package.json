@@ -1,7 +1,7 @@
 {
   "name": "atlas-gym-partner",
   "private": true,
-  "version": "0.0.12",
+  "version": "0.0.13",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -27,6 +27,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-firebase-hooks": "^5.1.1",
+    "react-grid-layout": "^2.2.3",
     "react-hook-form": "^7.51.5",
     "react-icons": "^4.8.0",
     "react-router-dom": "^7.10.0",
