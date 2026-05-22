@@ -28,17 +28,14 @@ function GymGrid({
   layout,
   exercises,
   onLayoutChange,
-  onDropExercise,
   onRemoveExercise,
-  selectedActiveExercise,
-  onSelectExercise,
 }) {
   const isDroppingRef = useRef(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const cellSize = isMobile ? 90 : 110; 
-  const margin = isMobile ? [4, 4] : [10, 10];
+  const cellSize = isMobile ? 95 : 110; 
+  const margin = isMobile ? [6, 6] : [10, 10];
 
   const boardWidth = layout.cols * cellSize + (layout.cols - 1) * margin[0] + margin[0] * 2;
   const boardHeight = layout.rows * cellSize + (layout.rows - 1) * margin[1] + margin[1] * 2;
@@ -57,7 +54,13 @@ function GymGrid({
 
   const reactGridLayout = useMemo(() => [
     ...reservedCells.map((c) => ({ i: c.id, x: c.x, y: c.y, w: c.w, h: c.h, static: true })),
-    ...gridItems.map((item) => ({ ...toGridLayoutItem(item, exercisesById.get(item.exerciseId)), maxW: layout.cols, maxH: layout.rows })),
+    ...gridItems.map((item) => ({ 
+      ...toGridLayoutItem(item, exercisesById.get(item.exerciseId)), 
+      maxW: layout.cols, 
+      maxH: layout.rows,
+      isDraggable: true,
+      isResizable: true
+    })),
   ], [exercisesById, gridItems, layout.cols, layout.rows, reservedCells]);
 
   const handleLayoutChange = (nextLayout) => {
@@ -66,26 +69,6 @@ function GymGrid({
       .filter((i) => i.i !== '__dropping-elem__' && !i.i.startsWith('__reserved_'))
       .map(fromGridLayoutItem);
     onLayoutChange(removeReservedCollisions(items, layout.rows, layout.cols));
-  };
-
-  const handleBackgroundGridClick = (e) => {
-    if (!selectedActiveExercise) return;
-    
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left - margin[0];
-    const clickY = e.clientY - rect.top - margin[1];
-    
-    const colIndex = Math.floor(clickX / (cellSize + margin[0]));
-    const rowIndex = Math.floor(clickY / (cellSize + margin[1]));
-
-    if (colIndex >= 0 && colIndex < layout.cols && rowIndex >= 0 && rowIndex < layout.rows) {
-      onDropExercise(selectedActiveExercise.id, {
-        x: colIndex,
-        y: rowIndex,
-        w: selectedActiveExercise.width || 1,
-        h: selectedActiveExercise.height || 1,
-      });
-    }
   };
 
   return (
@@ -122,18 +105,16 @@ function GymGrid({
         }}
       >
         <Box
-          onClick={handleBackgroundGridClick}
           sx={{
             width: boardWidth,
             height: boardHeight,
             position: 'relative',
             borderRadius: 2,
             border: isMobile ? '1px solid' : '2px dashed', 
-            borderColor: selectedActiveExercise ? 'primary.main' : alpha(theme.palette.divider, 0.4),
-            cursor: selectedActiveExercise ? 'cell' : 'default',
-            backgroundImage: (t) => isMobile ? 'none' : `
-              linear-gradient(${alpha(t.palette.divider, 0.4)} 1px, transparent 1px),
-              linear-gradient(90deg, ${alpha(t.palette.divider, 0.4)} 1px, transparent 1px)
+            borderColor: alpha(theme.palette.divider, 0.4),
+            backgroundImage: (t) => `
+              linear-gradient(${alpha(t.palette.divider, 0.25)} 1px, transparent 1px),
+              linear-gradient(90deg, ${alpha(t.palette.divider, 0.25)} 1px, transparent 1px)
             `,
             backgroundSize: `${cellSize + margin[0]}px ${cellSize + margin[1]}px`,
             backgroundPosition: `${margin[0]}px ${margin[1]}px`,
@@ -147,30 +128,30 @@ function GymGrid({
             rowHeight={cellSize}
             margin={margin}
             containerPadding={margin}
-            isDraggable={!isMobile} 
-            isResizable={!isMobile}
+            
+            // PROPIEDADES CRÍTICAS PARA EL COMPORTAMIENTO LIBRE DE PLANO:
+            compactType={null}       // Evita que las casillas fluyan hacia arriba automáticamente
+            preventCollision={true}  // Bloquea que una celda empuje o desplace a otra
+            allowOverlap={false}     // Garantiza que NUNCA puedan quedar montadas una sobre otra
+            
+            isDraggable={true} 
+            isResizable={true} 
+            draggableHandle=".draggable-box"
             onLayoutChange={handleLayoutChange}
             style={{ height: '100%' }}
           >
             {gridItems.map((item) => {
               const ex = exercisesById.get(item.exerciseId);
               const color = ex.color || theme.palette.primary.main;
-              const isBeingMoved = selectedActiveExercise?.id === ex.id;
 
               return (
                 <Box key={item.exerciseId}>
                   <Box
-                    onClick={(e) => {
-                      if (isMobile) {
-                        e.stopPropagation();
-                        onRemoveExercise(ex.id);
-                        onSelectExercise(ex);
-                      }
-                    }}
+                    className="draggable-box"
                     sx={{
                       height: '100%',
                       borderRadius: 1.5,
-                      border: `1.5px solid ${isBeingMoved ? theme.palette.primary.main : alpha(color, 0.45)}`,
+                      border: `1.5px solid ${alpha(color, 0.45)}`,
                       bgcolor: alpha(color, 0.1),
                       display: 'flex',
                       alignItems: 'center',
@@ -178,35 +159,38 @@ function GymGrid({
                       p: 1,
                       boxSizing: 'border-box',
                       position: 'relative',
-                      opacity: isBeingMoved ? 0.4 : 1,
-                      cursor: 'pointer',
+                      cursor: 'grab',
+                      '&:active': { cursor: 'grabbing' }
                     }}
                   >
-                    {/* BOTÓN CORREGIDO: Dimensiones y padding estrictos para no tapar la celda */}
                     <IconButton
                       size="small"
                       onClick={(e) => { 
                         e.stopPropagation(); 
+                        e.preventDefault();
                         onRemoveExercise(ex.id); 
+                      }}
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
                       }}
                       sx={{ 
                         position: 'absolute', 
                         top: 4, 
                         right: 4, 
-                        zIndex: 10,
-                        p: 0, // Elimina el padding expansivo predeterminado
-                        width: 16, // Ancho delimitado
-                        height: 16, // Alto delimitado
-                        minWidth: 16,
+                        zIndex: 30, 
+                        p: 0,
+                        width: 18,
+                        height: 18,
+                        minWidth: 18,
                         bgcolor: theme.palette.background.paper,
                         border: '1px solid',
-                        borderColor: alpha(theme.palette.error.main, 0.3),
+                        borderColor: alpha(theme.palette.error.main, 0.4),
                         borderRadius: '4px',
                         boxShadow: theme.shadows[1],
                         '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.08) } 
                       }}
                     >
-                      <CloseIcon sx={{ fontSize: 10, color: 'error.main', fontWeight: 'bold' }} />
+                      <CloseIcon sx={{ fontSize: 11, color: 'error.main', fontWeight: 'bold' }} />
                     </IconButton>
 
                     <Typography 
