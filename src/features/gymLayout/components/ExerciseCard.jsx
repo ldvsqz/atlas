@@ -4,126 +4,110 @@ import {
   Chip,
   IconButton,
   Stack,
-  Tooltip,
   Typography,
   alpha,
+  useMediaQuery,
+  useTheme,
+  Menu,
+  MenuItem
 } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import StraightenIcon from '@mui/icons-material/Straighten';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import TouchAppIcon from '@mui/icons-material/TouchApp';
 import { getExerciseSizeLabel } from '../models/gymLayoutModels';
 
 function ExerciseCard({
   exercise,
   placed = false,
-  compact = false,
+  isSelected = false,
+  onSelect,
   onEdit,
   onDelete,
-  onRemoveFromGrid,
 }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const color = exercise.color || '#2563EB';
 
-  const handleDragStart = (event) => {
-    event.dataTransfer.setData('text/plain', exercise.id);
-    event.dataTransfer.setData('application/atlas-gym-exercise', JSON.stringify(exercise));
-    event.dataTransfer.effectAllowed = 'copy';
+  const [anchorEl, setAnchorEl] = React.useState(null);
+  const openMenu = Boolean(anchorEl);
+
+  const handleMenuClick = (e) => {
+    e.stopPropagation();
+    setAnchorEl(e.currentTarget);
+  };
+
+  const handleMenuClose = (e) => {
+    if (e) e.stopPropagation();
+    setAnchorEl(null);
   };
 
   return (
     <Box
-      draggable={!placed}
-      onDragStart={!placed ? handleDragStart : undefined}
-      sx={(theme) => ({
-        height: '100%',
-        minHeight: placed ? '100%' : 116,
-        p: compact ? 1 : 1.5,
-        borderRadius: 1,
-        border: '1px solid',
-        borderColor: placed ? alpha(color, 0.45) : 'divider',
-        bgcolor: placed ? alpha(color, theme.palette.mode === 'dark' ? 0.2 : 0.12) : 'background.paper',
-        boxShadow: placed ? `inset 0 0 0 1px ${alpha(color, 0.22)}` : 'none',
-        cursor: placed ? 'grab' : 'copy',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        overflow: 'hidden',
-        transition: 'border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease',
-        '&:hover': {
-          borderColor: alpha(color, 0.8),
-          boxShadow: `0 10px 24px ${alpha(color, 0.14)}`,
-        },
-      })}
+      onClick={() => !placed && onSelect && onSelect(isSelected ? null : exercise)}
+      sx={{
+        p: 1.5,
+        borderRadius: 2,
+        border: '1.5px solid',
+        borderColor: isSelected ? color : 'divider',
+        bgcolor: isSelected ? alpha(color, 0.06) : 'background.paper',
+        cursor: 'pointer',
+        position: 'relative',
+        boxSizing: 'border-box',
+        width: '100%',
+        transition: 'all 0.15s ease',
+        '&:active': { transform: 'scale(0.99)' }
+      }}
     >
-      <Stack direction="row" spacing={1} alignItems="flex-start">
-        <Box
-          sx={{
-            width: 10,
-            height: 10,
-            borderRadius: '50%',
-            mt: 0.65,
-            bgcolor: color,
-            flex: '0 0 auto',
-          }}
+      <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
+          <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Typography fontWeight={800} variant="body2" color="text.primary" noWrap sx={{ fontSize: 13.5 }}>
+              {exercise.name}
+            </Typography>
+          </Box>
+        </Stack>
+
+        {/* MENÚ DE ACCIONES SÚPER LIMPIO (NUNCA SE DESCUADRA) */}
+        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ flexShrink: 0 }}>
+          {isMobile && !placed && (
+            isSelected ? <CheckCircleIcon sx={{ color, fontSize: 18 }} /> : <TouchAppIcon sx={{ color: 'text.disabled', fontSize: 16, opacity: 0.5 }} />
+          )}
+          
+          <IconButton size="small" onClick={handleMenuClick} sx={{ p: 0.25 }}>
+            <MoreVertIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+          </IconButton>
+        </Stack>
+      </Stack>
+
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1 }}>
+        <Chip
+          icon={<StraightenIcon style={{ fontSize: 11 }} />}
+          label={getExerciseSizeLabel(exercise)}
+          size="small"
+          variant="outlined"
+          sx={{ fontSize: 10, height: 18, borderRadius: 1, borderColor: alpha(theme.palette.divider, 0.8) }}
         />
-
-        <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography fontWeight={800} sx={{ overflowWrap: 'anywhere', lineHeight: 1.2 }}>
-            {exercise.name}
-          </Typography>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{
-              mt: 0.5,
-              overflow: 'hidden',
-              display: '-webkit-box',
-              WebkitLineClamp: placed ? 2 : 3,
-              WebkitBoxOrient: 'vertical',
-            }}
-          >
-            {exercise.description}
-          </Typography>
-        </Box>
-
-        {placed ? (
-          <Tooltip title="Mover">
-            <DragIndicatorIcon color="action" fontSize="small" />
-          </Tooltip>
-        ) : null}
       </Stack>
 
-      <Stack direction="row" spacing={0.75} alignItems="center" justifyContent="space-between" sx={{ mt: 1 }}>
-        <Stack direction="row" spacing={0.75} sx={{ minWidth: 0, flexWrap: 'wrap', rowGap: 0.5 }}>
-          <Chip
-            icon={<StraightenIcon />}
-            label={getExerciseSizeLabel(exercise)}
-            size="small"
-            variant="outlined"
-          />
-          {exercise.category ? <Chip label={exercise.category} size="small" /> : null}
-        </Stack>
-
-        <Stack direction="row" spacing={0.25}>
-          {!placed && onEdit ? (
-            <Tooltip title="Editar">
-              <IconButton size="small" aria-label="Editar ejercicio" onClick={() => onEdit(exercise)}>
-                <EditIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          ) : null}
-          <Tooltip title={placed ? 'Quitar del plano' : 'Eliminar'}>
-            <IconButton
-              size="small"
-              color="error"
-              aria-label={placed ? 'Quitar ejercicio del plano' : 'Eliminar ejercicio'}
-              onClick={() => (placed ? onRemoveFromGrid?.(exercise.id) : onDelete?.(exercise))}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      </Stack>
+      {/* Menú nativo desplegable que flota sobre la app */}
+      <Menu
+        anchorEl={anchorEl}
+        open={openMenu}
+        onClose={handleMenuClose}
+        onClick={(e) => e.stopPropagation()}
+        PaperProps={{ sx: { borderRadius: 2, minWidth: 120, boxShadow: theme.shadows[3] } }}
+      >
+        <MenuItem onClick={(e) => { handleMenuClose(e); onEdit?.(exercise); }} sx={{ fontSize: 13, gap: 1 }}>
+          <EditIcon sx={{ fontSize: 16, color: 'text.secondary' }} /> Editar
+        </MenuItem>
+        <MenuItem onClick={(e) => { handleMenuClose(e); onDelete?.(exercise); }} sx={{ fontSize: 13, gap: 1, color: 'error.main' }}>
+          <DeleteIcon sx={{ fontSize: 16, color: 'error.main' }} /> Eliminar
+        </MenuItem>
+      </Menu>
     </Box>
   );
 }
