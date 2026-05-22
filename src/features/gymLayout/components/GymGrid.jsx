@@ -30,7 +30,7 @@ function GymGrid({
   onLayoutChange,
   onDropExercise,
   onRemoveExercise,
-  selectedActiveExercise, // Necesario para saber qué ejercicio está seleccionado al hacer "Tap"
+  selectedActiveExercise, 
 }) {
   const isDroppingRef = useRef(false);
   const theme = useTheme();
@@ -73,13 +73,11 @@ function GymGrid({
     onLayoutChange(removeReservedCollisions(items, layout.rows, layout.cols));
   };
 
-  // RESTAURACIÓN DE TAP & PLACE: Calcula la celda exacta basándose en el clic/tap del contenedor
   const handleBackgroundGridClick = (e) => {
-    // Si no hay ningún ejercicio seleccionado en la paleta lateral/inferior, ignoramos el clic
     if (!selectedActiveExercise) return;
 
-    // Evitamos falsos clics disparados desde los botones de eliminar o manejadores internos
-    if (e.target.closest('.MuiIconButton-root') || e.target.closest('.react-resizable-handle')) {
+    // Modificado para detectar también nuestro nuevo disparador por Pointer
+    if (e.target.closest('.js-btn-eliminar') || e.target.closest('.react-resizable-handle')) {
       return;
     }
     
@@ -87,17 +85,14 @@ function GymGrid({
     const clickX = e.clientX - rect.left - margin[0];
     const clickY = e.clientY - rect.top - margin[1];
     
-    // Mapeo matemático inverso de píxeles a posiciones del Grid (X, Y)
     const colIndex = Math.floor(clickX / (cellSize + margin[0]));
     const rowIndex = Math.floor(clickY / (cellSize + margin[1]));
 
     if (colIndex >= 0 && colIndex < layout.cols && rowIndex >= 0 && rowIndex < layout.rows) {
-      // Validamos si la casilla objetivo colisiona con una zona bloqueada o reservada
       const colisionaReservada = reservedCells.some(
         (cell) => colIndex >= cell.x && colIndex < cell.x + cell.w && rowIndex >= cell.y && rowIndex < cell.y + cell.h
       );
 
-      // Validamos si ya existe otro ejercicio ocupando ese cuadrante exacto
       const colisionaEjercicio = gridItems.some(
         (item) => colIndex >= item.x && colIndex < item.x + item.w && rowIndex >= item.y && rowIndex < item.y + item.h
       );
@@ -147,7 +142,7 @@ function GymGrid({
         }}
       >
         <Box
-          onClick={handleBackgroundGridClick} // <--- Re-enlazado el evento aquí con las protecciones anti-bug
+          onClick={handleBackgroundGridClick}
           sx={{
             width: boardWidth,
             height: boardHeight,
@@ -204,45 +199,66 @@ function GymGrid({
                       '&:active': { cursor: 'grabbing' }
                     }}
                   >
+                    {/* SOLUCIÓN AL MULTI-CLICK: Interceptamos en la fase de PointerDown */}
                     <IconButton
+                      className="js-btn-eliminar" // Identificador para el bypass del fondo
                       size="small"
-                      onClick={(e) => { 
+                      onPointerDown={(e) => {
+                        // Forzamos la ejecución inmediata en el milisegundo 0 del touch/click
                         e.stopPropagation(); 
                         e.preventDefault();
-                        onRemoveExercise(ex.id); 
+                        onRemoveExercise(ex.id);
                       }}
-                      onTouchStart={(e) => {
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        // Dejamos esto como fallback por seguridad, mitigando rebotes
                         e.stopPropagation();
-                      }}
-                      onMouseDown={(e) => {
-                        e.stopPropagation();
+                        e.preventDefault();
                       }}
                       sx={{ 
                         position: 'absolute', 
-                        top: 4, 
-                        right: 4, 
-                        zIndex: 40, 
+                        top: -4, 
+                        right: -4, 
+                        zIndex: 999, // Lo mandamos al frente de todo el ecosistema del DOM
                         p: 0,
-                        width: 24, 
-                        height: 24, 
-                        minWidth: 24,
-                        bgcolor: theme.palette.mode === 'dark' ? '#1e1e1e' : '#ffffff',
-                        border: '1px solid',
-                        borderColor: alpha(theme.palette.error.main, 0.5),
-                        borderRadius: '6px',
-                        boxShadow: theme.shadows[2],
-                        transition: 'transform 0.1s ease, background-color 0.1s ease',
-                        '&:hover': { 
-                          bgcolor: alpha(theme.palette.error.main, 0.08),
-                          transform: 'scale(1.05)'
+                        width: 38, // Un pelín más grande para asegurar la captura del puntero
+                        height: 38, 
+                        minWidth: 38,
+                        bgcolor: 'transparent',
+                        borderRadius: '50%',
+                        '&:hover': { bgcolor: 'transparent' },
+                        
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          width: 24, 
+                          height: 24,
+                          bgcolor: theme.palette.mode === 'dark' ? '#242424' : '#ffffff',
+                          border: '1.5px solid',
+                          borderColor: theme.palette.error.main,
+                          borderRadius: '6px',
+                          boxShadow: theme.shadows[3],
+                          transition: 'all 0.1s ease',
                         },
-                        '&:active': {
-                          bgcolor: alpha(theme.palette.error.main, 0.15),
-                          transform: 'scale(0.95)'
+                        '&:hover::after': {
+                          bgcolor: alpha(theme.palette.error.main, 0.08),
+                          transform: 'scale(1.08)',
+                        },
+                        '&:active::after': {
+                          bgcolor: alpha(theme.palette.error.main, 0.2),
+                          transform: 'scale(0.92)',
                         }
                       }}
                     >
-                      <CloseIcon sx={{ fontSize: 14, color: 'error.main', fontWeight: 900 }} />
+                      <CloseIcon 
+                        sx={{ 
+                          fontSize: 13, 
+                          color: 'error.main', 
+                          fontWeight: 900, 
+                          zIndex: 1000 
+                        }} 
+                      />
                     </IconButton>
 
                     <Typography 
