@@ -28,7 +28,9 @@ function GymGrid({
   layout,
   exercises,
   onLayoutChange,
+  onDropExercise,
   onRemoveExercise,
+  selectedActiveExercise, // Necesario para saber qué ejercicio está seleccionado al hacer "Tap"
 }) {
   const isDroppingRef = useRef(false);
   const theme = useTheme();
@@ -71,6 +73,46 @@ function GymGrid({
     onLayoutChange(removeReservedCollisions(items, layout.rows, layout.cols));
   };
 
+  // RESTAURACIÓN DE TAP & PLACE: Calcula la celda exacta basándose en el clic/tap del contenedor
+  const handleBackgroundGridClick = (e) => {
+    // Si no hay ningún ejercicio seleccionado en la paleta lateral/inferior, ignoramos el clic
+    if (!selectedActiveExercise) return;
+
+    // Evitamos falsos clics disparados desde los botones de eliminar o manejadores internos
+    if (e.target.closest('.MuiIconButton-root') || e.target.closest('.react-resizable-handle')) {
+      return;
+    }
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left - margin[0];
+    const clickY = e.clientY - rect.top - margin[1];
+    
+    // Mapeo matemático inverso de píxeles a posiciones del Grid (X, Y)
+    const colIndex = Math.floor(clickX / (cellSize + margin[0]));
+    const rowIndex = Math.floor(clickY / (cellSize + margin[1]));
+
+    if (colIndex >= 0 && colIndex < layout.cols && rowIndex >= 0 && rowIndex < layout.rows) {
+      // Validamos si la casilla objetivo colisiona con una zona bloqueada o reservada
+      const colisionaReservada = reservedCells.some(
+        (cell) => colIndex >= cell.x && colIndex < cell.x + cell.w && rowIndex >= cell.y && rowIndex < cell.y + cell.h
+      );
+
+      // Validamos si ya existe otro ejercicio ocupando ese cuadrante exacto
+      const colisionaEjercicio = gridItems.some(
+        (item) => colIndex >= item.x && colIndex < item.x + item.w && rowIndex >= item.y && rowIndex < item.y + item.h
+      );
+
+      if (!colisionaReservada && !colisionaEjercicio) {
+        onDropExercise(selectedActiveExercise.id, {
+          x: colIndex,
+          y: rowIndex,
+          w: selectedActiveExercise.width || 1,
+          h: selectedActiveExercise.height || 1,
+        });
+      }
+    }
+  };
+
   return (
     <Paper 
       variant={isMobile ? "none" : "outlined"} 
@@ -105,13 +147,15 @@ function GymGrid({
         }}
       >
         <Box
+          onClick={handleBackgroundGridClick} // <--- Re-enlazado el evento aquí con las protecciones anti-bug
           sx={{
             width: boardWidth,
             height: boardHeight,
             position: 'relative',
             borderRadius: 2,
             border: isMobile ? '1px solid' : '2px dashed', 
-            borderColor: alpha(theme.palette.divider, 0.4),
+            borderColor: selectedActiveExercise ? 'primary.main' : alpha(theme.palette.divider, 0.4),
+            cursor: selectedActiveExercise ? 'cell' : 'default',
             backgroundImage: (t) => `
               linear-gradient(${alpha(t.palette.divider, 0.25)} 1px, transparent 1px),
               linear-gradient(90deg, ${alpha(t.palette.divider, 0.25)} 1px, transparent 1px)
@@ -128,12 +172,9 @@ function GymGrid({
             rowHeight={cellSize}
             margin={margin}
             containerPadding={margin}
-            
-            // PROPIEDADES CRÍTICAS PARA EL COMPORTAMIENTO LIBRE DE PLANO:
-            compactType={null}       // Evita que las casillas fluyan hacia arriba automáticamente
-            preventCollision={true}  // Bloquea que una celda empuje o desplace a otra
-            allowOverlap={false}     // Garantiza que NUNCA puedan quedar montadas una sobre otra
-            
+            compactType={null}       
+            preventCollision={true}  
+            allowOverlap={false}     
             isDraggable={true} 
             isResizable={true} 
             draggableHandle=".draggable-box"
@@ -173,24 +214,35 @@ function GymGrid({
                       onTouchStart={(e) => {
                         e.stopPropagation();
                       }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                      }}
                       sx={{ 
                         position: 'absolute', 
                         top: 4, 
                         right: 4, 
-                        zIndex: 30, 
+                        zIndex: 40, 
                         p: 0,
-                        width: 18,
-                        height: 18,
-                        minWidth: 18,
-                        bgcolor: theme.palette.background.paper,
+                        width: 24, 
+                        height: 24, 
+                        minWidth: 24,
+                        bgcolor: theme.palette.mode === 'dark' ? '#1e1e1e' : '#ffffff',
                         border: '1px solid',
-                        borderColor: alpha(theme.palette.error.main, 0.4),
-                        borderRadius: '4px',
-                        boxShadow: theme.shadows[1],
-                        '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.08) } 
+                        borderColor: alpha(theme.palette.error.main, 0.5),
+                        borderRadius: '6px',
+                        boxShadow: theme.shadows[2],
+                        transition: 'transform 0.1s ease, background-color 0.1s ease',
+                        '&:hover': { 
+                          bgcolor: alpha(theme.palette.error.main, 0.08),
+                          transform: 'scale(1.05)'
+                        },
+                        '&:active': {
+                          bgcolor: alpha(theme.palette.error.main, 0.15),
+                          transform: 'scale(0.95)'
+                        }
                       }}
                     >
-                      <CloseIcon sx={{ fontSize: 11, color: 'error.main', fontWeight: 'bold' }} />
+                      <CloseIcon sx={{ fontSize: 14, color: 'error.main', fontWeight: 900 }} />
                     </IconButton>
 
                     <Typography 
@@ -208,7 +260,8 @@ function GymGrid({
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
                         userSelect: 'none',
-                        px: 0.5
+                        px: 0.5,
+                        mt: 1 
                       }}
                     >
                       {ex.name}
