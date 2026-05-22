@@ -2,11 +2,15 @@ import React, { useMemo, useState } from 'react';
 import {
   Box,
   Container,
-  Grid,
   LinearProgress,
   Stack,
   Typography,
+  Button,
+  Paper,
+  alpha
 } from '@mui/material';
+import CancelIcon from '@mui/icons-material/Cancel';
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import { useSnackbar } from '../../../Components/snackbar/AtlasSnackbar';
 import DeleteConfirmationDialog from '../../training/components/DeleteConfirmationDialog';
 import ExercisePalette from '../components/ExercisePalette';
@@ -49,6 +53,7 @@ function GymLayoutPage({ menu }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingExercise, setEditingExercise] = useState(null);
   const [exerciseToDelete, setExerciseToDelete] = useState(null);
+  const [selectedPaletteExercise, setSelectedPaletteExercise] = useState(null);
 
   const placedExerciseIds = useMemo(
     () => layout.items.map((item) => item.exerciseId),
@@ -72,9 +77,7 @@ function GymLayoutPage({ menu }) {
       ...placedIds.filter((exerciseId) => !(layout.exerciseOrder || []).includes(exerciseId)),
     ];
 
-    return order
-      .map((exerciseId) => exercisesById.get(exerciseId))
-      .filter(Boolean);
+    return order.map((exerciseId) => exercisesById.get(exerciseId)).filter(Boolean);
   }, [exercisesById, layout.exerciseOrder, layout.items]);
 
   const handleExerciseSubmit = async (values) => {
@@ -94,19 +97,20 @@ function GymLayoutPage({ menu }) {
       }));
       return;
     }
-
     await createExercise(values);
   };
 
   const handleDeleteExercise = async () => {
     if (!exerciseToDelete) return;
-
     await deleteExercise(exerciseToDelete.id);
     setLayout((current) => ({
       ...current,
       items: current.items.filter((item) => item.exerciseId !== exerciseToDelete.id),
       exerciseOrder: (current.exerciseOrder || []).filter((itemId) => itemId !== exerciseToDelete.id),
     }));
+    if (selectedPaletteExercise?.id === exerciseToDelete.id) {
+      setSelectedPaletteExercise(null);
+    }
     setExerciseToDelete(null);
   };
 
@@ -119,34 +123,32 @@ function GymLayoutPage({ menu }) {
 
   const handleDropExercise = (exerciseId, position) => {
     const exercise = exercises.find((item) => item.id === exerciseId);
-    if (!exercise) {
-      showSnackbar('No se encontró el ejercicio arrastrado', 'error');
-      return;
-    }
-
-    if (layout.items.some((item) => item.exerciseId === exerciseId)) {
-      showSnackbar('Ese ejercicio ya está colocado en el plano', 'warning');
-      return;
-    }
+    if (!exercise) return;
 
     const nextItem = {
       exerciseId,
       x: position.x,
       y: position.y,
-      w: Math.min(Number(exercise.width || position.w || 1), layout.cols),
-      h: Math.min(Number(exercise.height || position.h || 1), layout.rows),
+      w: Math.min(Number(exercise.width || 1), layout.cols),
+      h: Math.min(Number(exercise.height || 1), layout.rows),
     };
 
     if (collidesWithReservedCell(nextItem, layout.rows, layout.cols)) {
-      showSnackbar('Esa casilla está bloqueada: baño o bodega', 'warning');
+      showSnackbar('Casilla bloqueada (Baño / Bodega)', 'warning');
       return;
     }
 
-    setLayout((current) => ({
-      ...current,
-      items: removeReservedCollisions([...current.items, nextItem], current.rows, current.cols),
-      exerciseOrder: [...(current.exerciseOrder || []), exerciseId],
-    }));
+    setLayout((current) => {
+      const filtered = current.items.filter((item) => item.exerciseId !== exerciseId);
+      const existsInOrder = (current.exerciseOrder || []).includes(exerciseId);
+      return {
+        ...current,
+        items: removeReservedCollisions([...filtered, nextItem], current.rows, current.cols),
+        exerciseOrder: existsInOrder ? current.exerciseOrder : [...(current.exerciseOrder || []), exerciseId],
+      };
+    });
+    
+    setSelectedPaletteExercise(null);
   };
 
   const handleRemoveExerciseFromGrid = (exerciseId) => {
@@ -172,18 +174,12 @@ function GymLayoutPage({ menu }) {
       const [movedExerciseId] = nextOrder.splice(sourceIndex, 1);
       nextOrder.splice(targetIndex, 0, movedExerciseId);
 
-      return {
-        ...current,
-        exerciseOrder: nextOrder,
-      };
+      return { ...current, exerciseOrder: nextOrder };
     });
   };
 
   const handleListNotesChange = (notes) => {
-    setLayout((current) => ({
-      ...current,
-      listNotes: notes,
-    }));
+    setLayout((current) => ({ ...current, listNotes: notes }));
   };
 
   const handleSave = async () => {
@@ -198,7 +194,6 @@ function GymLayoutPage({ menu }) {
       ),
       exerciseOrder: orderedPlacedExercises.map((exercise) => exercise.id),
     };
-
     await saveLayout(cleanedLayout);
   };
 
@@ -207,46 +202,25 @@ function GymLayoutPage({ menu }) {
   };
 
   const handleNewLayout = () => {
-    setLayout(createGymLayoutModel({
-      id: `layout-${Date.now()}`,
-      name: 'Nuevo plano',
-    }));
+    setLayout(createGymLayoutModel({ id: `layout-${Date.now()}`, name: 'Nuevo plano' }));
   };
 
   const handleDownloadPdf = () => {
-    downloadGymLayoutPdf({
-      layout,
-      exercises,
-      orderedExercises: orderedPlacedExercises,
-    });
-  };
-
-  const openCreateDialog = () => {
-    setEditingExercise(null);
-    setDialogOpen(true);
-  };
-
-  const openEditDialog = (exercise) => {
-    setEditingExercise(exercise);
-    setDialogOpen(true);
+    downloadGymLayoutPdf({ layout, exercises, orderedExercises: orderedPlacedExercises });
   };
 
   const loading = exercisesLoading || layoutLoading;
 
   return (
-    <Box>
+    <Box sx={{ pb: { xs: 12, lg: 3 } }}>
       {menu}
-
       {loading ? <LinearProgress /> : null}
 
       <Container maxWidth="xl" sx={{ py: { xs: 2, md: 3 } }}>
         <Stack spacing={2.5}>
           <Box>
-            <Typography variant="h4" fontWeight={900}>
-              Plano del gimnasio
-            </Typography>
-            <Typography color="text.secondary">
-              Editor visual tipo Battleship para organizar estaciones, ejercicios y zonas de trabajo.
+            <Typography variant="h4" fontWeight={900} letterSpacing="-0.5px">
+              Plano de distribución
             </Typography>
           </Box>
 
@@ -263,39 +237,95 @@ function GymLayoutPage({ menu }) {
             onDownloadPdf={handleDownloadPdf}
           />
 
-          <Grid container spacing={2}>
-            <Grid item xs={12} lg={3}>
+          <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2.5} alignItems="start">
+            <Box sx={{ width: { xs: '100%', lg: 280, xl: 320 }, flexShrink: 0 }}>
               <ExercisePalette
                 exercises={exercises}
                 placedExerciseIds={placedExerciseIds}
                 loading={exercisesLoading}
-                onCreate={openCreateDialog}
-                onEdit={openEditDialog}
+                onCreate={() => { setEditingExercise(null); setDialogOpen(true); }}
+                onEdit={(ex) => { setEditingExercise(ex); setDialogOpen(true); }}
                 onDelete={setExerciseToDelete}
+                selectedExercise={selectedPaletteExercise}
+                onSelectExercise={setSelectedPaletteExercise}
               />
-            </Grid>
+            </Box>
 
-            <Grid item xs={12} lg={5}>
+            <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
               <GymGrid
                 layout={layout}
                 exercises={exercises}
                 onLayoutChange={handleLayoutItemsChange}
                 onDropExercise={handleDropExercise}
                 onRemoveExercise={handleRemoveExerciseFromGrid}
+                selectedActiveExercise={selectedPaletteExercise}
+                onSelectExercise={setSelectedPaletteExercise}
               />
-            </Grid>
+            </Box>
 
-            <Grid item xs={12} lg={4}>
+            <Box sx={{ width: { xs: '100%', lg: 340, xl: 380 }, flexShrink: 0 }}>
               <LayoutExerciseList
                 exercises={orderedPlacedExercises}
                 listNotes={layout.listNotes || ''}
                 onReorder={handleReorderExercise}
                 onListNotesChange={handleListNotesChange}
               />
-            </Grid>
-          </Grid>
+            </Box>
+          </Stack>
         </Stack>
       </Container>
+
+      {/* COMPONENTE DE ACCIÓN INTERACTIVA INFERIOR (Solo visible cuando tienes un ejercicio "en la mano") */}
+      {selectedPaletteExercise && (
+        <Paper
+          elevation={4}
+          sx={{
+            position: 'fixed',
+            bottom: 80,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1300,
+            p: 1.5,
+            borderRadius: 3,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5,
+            bgcolor: 'background.paper',
+            border: '1px solid',
+            borderColor: 'primary.main',
+            width: 'calc(100% - 32px)',
+            maxWidth: 400
+          }}
+        >
+          <Typography variant="body2" fontWeight={800} sx={{ flex: 1, noWrap: true, fontSize: 12.5 }}>
+            Moviendo: <b>{selectedPaletteExercise.name}</b>
+          </Typography>
+          <Button
+            size="small"
+            color="inherit"
+            variant="outlined"
+            startIcon={<CancelIcon />}
+            onClick={() => setSelectedPaletteExercise(null)}
+            sx={{ textTransform: 'none', borderRadius: 1.5, fontSize: 11 }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            size="small"
+            color="error"
+            variant="contained"
+            disableElevation
+            startIcon={<DeleteSweepIcon />}
+            onClick={() => {
+              handleRemoveExerciseFromGrid(selectedPaletteExercise.id);
+              setSelectedPaletteExercise(null);
+            }}
+            sx={{ textTransform: 'none', borderRadius: 1.5, fontSize: 11 }}
+          >
+            Quitar
+          </Button>
+        </Paper>
+      )}
 
       <CreateExerciseDialog
         open={dialogOpen}
@@ -308,7 +338,7 @@ function GymLayoutPage({ menu }) {
       <DeleteConfirmationDialog
         open={Boolean(exerciseToDelete)}
         title="Eliminar ejercicio"
-        message={`¿Desea eliminar "${exerciseToDelete?.name || 'este ejercicio'}"? También se quitará del plano actual.`}
+        message={`¿Desea eliminar totalmente del sistema a "${exerciseToDelete?.name || 'este ejercicio'}"?`}
         loading={exerciseSaving}
         onClose={() => setExerciseToDelete(null)}
         onConfirm={handleDeleteExercise}
