@@ -61,7 +61,7 @@ function App() {
           <Route path="/users" element={<Users menu={getMenu("Personas")} />} />
           <Route path="/finance" element={<Finance menu={getMenu("Finanzas")} />} />
           <Route path="/training" element={<TrainingPage menu={getMenu("Planificación")} />} />
-          <Route path="/gym-layout" element={<GymLayoutPage menu={getMenu("Plano del gimnasio")} />} />
+          <Route path="/gym-layout" element={<GymLayoutPage menu={getMenu("Circuitos del gimnasio")} />} />
           <Route path="/settings" element={<Settings menu={getMenu("Configuración")} />} />
           <Route path="/exercises" element={<Exercises menu={getMenu("Ejercicios")} />} />
           <Route path="/aboutus" element={<Aboutus menu={getMenu("Sobre nosotros")} />} />

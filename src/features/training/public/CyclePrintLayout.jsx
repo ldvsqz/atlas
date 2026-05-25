@@ -13,7 +13,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LayersIcon from '@mui/icons-material/Layers';
 import { CYCLE_LABELS } from '../models/trainingModels';
 import DayPrintCard from './DayPrintCard';
-import { createExerciseMap, groupDaysByWeek } from './publicCycleUtils';
+import { groupDaysByWeek } from './publicCycleUtils';
 
 const STORAGE_KEY = 'PUBLIC_CYCLE_WEEK_EXPANSION_STATE';
 
@@ -41,30 +41,33 @@ function saveWeekExpansionState(cycleId, expandedWeeks) {
   }
 }
 
-const CyclePrintLayout = forwardRef(function CyclePrintLayout({ cycle, days, exercises }, ref) {
+const CyclePrintLayout = forwardRef(function CyclePrintLayout({ cycle, days, showHeader = true }, ref) {
   const groupedDays = useMemo(() => groupDaysByWeek(days), [days]);
-  const exerciseMap = useMemo(() => createExerciseMap(exercises), [exercises]);
   const [expandedWeeks, setExpandedWeeks] = useState({});
 
   useEffect(() => {
     if (!cycle?.id) return;
     const storedState = loadWeekExpansionState(cycle.id);
-    setExpandedWeeks(storedState || {});
-  }, [cycle?.id]);
+    const defaultState = Object.keys(groupedDays).reduce((state, weekIndex) => ({
+      ...state,
+      [weekIndex]: true,
+    }), {});
+    setExpandedWeeks(storedState || defaultState);
+  }, [cycle?.id, groupedDays]);
 
   useEffect(() => {
     if (!cycle?.id) return;
     saveWeekExpansionState(cycle.id, expandedWeeks);
   }, [cycle?.id, expandedWeeks]);
 
-  const plannedExercises = days.reduce(
+  const plannedNotes = days.reduce(
     (total, day) =>
       total
-      + (day.mainBlock?.exerciseIds?.length || 0)
-      + (day.shadowBlock?.exerciseIds?.length || 0)
-      + (day.extraBlock?.exerciseIds?.length || 0),
+      + (day.mainBlock?.notes?.trim() ? 1 : 0)
+      + (day.shadowBlock?.notes?.trim() ? 1 : 0),
     0
   );
+  const linkedLayouts = days.filter((day) => day.mainBlock?.gymLayoutId || day.mainBlock?.gymLayoutName).length;
 
   return (
     <Box
@@ -100,49 +103,52 @@ const CyclePrintLayout = forwardRef(function CyclePrintLayout({ cycle, days, exe
           },
         }}
       >
-        <Box
-          component="header"
-          sx={{
-            p: { xs: 1.25, sm: 1.5 },
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            '@media print': {
-              p: '6mm 8mm',
-              background: '#fff',
-            },
-          }}
-        >
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }}>
-            <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography variant="h6" component="h1" fontWeight={900} sx={{ fontSize: { xs: 18, sm: 20, md: 22 }, lineHeight: 1.15, overflowWrap: 'anywhere' }}>
-                {cycle.name || 'Ciclo de entrenamiento'}
-              </Typography>
-              {cycle.description && (
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{
-                    display: 'block',
-                    mt: 0.25,
-                    lineHeight: 1.25,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: { xs: 'normal', sm: 'nowrap' },
-                  }}
-                >
-                  {cycle.description}
+        {showHeader && (
+          <Box
+            component="header"
+            sx={{
+              p: { xs: 1.25, sm: 1.5 },
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              '@media print': {
+                p: '6mm 8mm',
+                background: '#fff',
+              },
+            }}
+          >
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }}>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Typography variant="h6" component="h1" fontWeight={900} sx={{ fontSize: { xs: 18, sm: 20, md: 22 }, lineHeight: 1.15, overflowWrap: 'anywhere' }}>
+                  {cycle.name || 'Ciclo de entrenamiento'}
                 </Typography>
-              )}
-            </Box>
-            <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap" justifyContent={{ xs: 'flex-start', sm: 'flex-end' }} sx={{ flexShrink: 0 }}>
-              <Chip icon={<LayersIcon />} label={CYCLE_LABELS[cycle.type] || cycle.type || 'Ciclo'} color="primary" size="small" />
-              <Chip label={`${Object.keys(groupedDays).length || 1} sem.`} size="small" variant="outlined" />
-              <Chip label={`${days.length} días`} size="small" variant="outlined" />
-              <Chip label={`${plannedExercises} ejercicios`} size="small" variant="outlined" />
+                {cycle.description && (
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{
+                      display: 'block',
+                      mt: 0.25,
+                      lineHeight: 1.25,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: { xs: 'normal', sm: 'nowrap' },
+                    }}
+                  >
+                    {cycle.description}
+                  </Typography>
+                )}
+              </Box>
+              <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap" justifyContent={{ xs: 'flex-start', sm: 'flex-end' }} sx={{ flexShrink: 0 }}>
+                <Chip icon={<LayersIcon />} label={CYCLE_LABELS[cycle.type] || cycle.type || 'Ciclo'} color="primary" size="small" />
+                <Chip label={`${Object.keys(groupedDays).length || 1} sem.`} size="small" variant="outlined" />
+                <Chip label={`${days.length} sesiones`} size="small" variant="outlined" />
+                <Chip label={`${plannedNotes} notas`} size="small" variant="outlined" />
+                <Chip label={`${linkedLayouts} circuitos`} size="small" variant="outlined" />
+              </Stack>
             </Stack>
-          </Stack>
-        </Box>
+          </Box>
+        )}
 
         <Box sx={{ p: { xs: 1.25, sm: 2, md: 3 }, '@media print': { p: '6mm 8mm 10mm' } }}>
           <Stack spacing={{ xs: 3, md: 4 }}>
@@ -150,7 +156,9 @@ const CyclePrintLayout = forwardRef(function CyclePrintLayout({ cycle, days, exe
               <Box
                 key={weekIndex}
                 component="section"
+                id={`public-week-${weekIndex}`}
                 sx={{
+                  scrollMarginTop: 72,
                   breakInside: 'avoid',
                   pageBreakInside: 'avoid',
                 }}
@@ -177,11 +185,11 @@ const CyclePrintLayout = forwardRef(function CyclePrintLayout({ cycle, days, exe
                     <Box sx={{ minWidth: 0, width: '100%' }}>
                       <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%' }}>
                         <Typography variant="h5" fontWeight={900}>
-                          Semana {weekIndex}
+                          Microciclo {weekIndex}
                         </Typography>
                         <Divider sx={{ flex: 1 }} />
                         <Typography variant="body2" color="text.secondary">
-                          {weekDays.length} días
+                          {weekDays.length} sesiones
                         </Typography>
                       </Stack>
                     </Box>
@@ -189,7 +197,7 @@ const CyclePrintLayout = forwardRef(function CyclePrintLayout({ cycle, days, exe
                   <AccordionDetails sx={{ p: 0 }}>
                     <Stack spacing={2} sx={{ p: 2 }}>
                       {weekDays.map((day) => (
-                        <DayPrintCard key={day.id || day.dayIndex} day={day} exerciseMap={exerciseMap} />
+                        <DayPrintCard key={day.id || day.dayIndex} day={day} />
                       ))}
                     </Stack>
                   </AccordionDetails>

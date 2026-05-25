@@ -12,9 +12,8 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SaveIcon from '@mui/icons-material/Save';
-import { BLOCK_LABELS, EDITABLE_DAY_BLOCK_KEYS, createEmptyBlock } from '../models/trainingModels';
+import { BLOCK_LABELS, createEmptyBlock } from '../models/trainingModels';
 import { useMicrocycleDays } from '../hooks/useMicrocycleDays';
-import MainBlockEditor from './MainBlockEditor';
 
 const normalizeDay = (day) => ({
   ...day,
@@ -24,7 +23,7 @@ const normalizeDay = (day) => ({
   extraBlock: day.extraBlock || createEmptyBlock(),
 });
 
-function DayEditor({ cycleId, weeks = 1, exercises }) {
+function DayEditor({ cycleId, weeks = 1 }) {
   const { days, loading, savingDayId, updateDay } = useMicrocycleDays(cycleId, weeks);
   const [drafts, setDrafts] = useState({});
 
@@ -96,8 +95,7 @@ function DayEditor({ cycleId, weeks = 1, exercises }) {
                   {draft.name || `Día ${draft.dayIndex}`}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {(draft.mainBlock?.exerciseIds?.length || 0)
-                    + (draft.extraBlock?.exerciseIds?.length || 0)} ejercicios planificados
+                  Microciclo {draft.weekIndex || 1} · Día {draft.dayOfWeek || draft.dayIndex}
                 </Typography>
               </Box>
             </AccordionSummary>
@@ -141,27 +139,31 @@ function DayEditor({ cycleId, weeks = 1, exercises }) {
                     fullWidth
                   />
                 </Box>
-                {EDITABLE_DAY_BLOCK_KEYS.map((blockKey) => (
-                  <Box
-                    key={blockKey}
-                    sx={{
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      borderRadius: 1,
-                      p: 2,
-                    }}
-                  >
-                    <Typography variant="overline" color="text.secondary">
-                      {BLOCK_LABELS[blockKey]}
-                    </Typography>
-                    <MainBlockEditor
-                      block={draft[blockKey]}
-                      exercises={exercises}
-                      onChange={(block) => updateBlock(day.id, blockKey, block)}
-                      disabled={isSaving}
-                    />
-                  </Box>
-                ))}
+                <Box
+                  key="mainBlock"
+                  sx={{
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    p: 2,
+                  }}
+                >
+                  <Typography variant="overline" color="text.secondary" sx={{ mb: 1 }}>
+                    {BLOCK_LABELS.mainBlock}
+                  </Typography>
+                  <TextField
+                    label="Notas del bloque principal"
+                    value={draft.mainBlock?.notes || ''}
+                    onChange={(event) => updateBlock(day.id, 'mainBlock', {
+                      ...draft.mainBlock,
+                      notes: event.target.value,
+                    })}
+                    disabled={isSaving}
+                    minRows={4}
+                    multiline
+                    fullWidth
+                  />
+                </Box>
 
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <Button
@@ -182,6 +184,8 @@ function DayEditor({ cycleId, weeks = 1, exercises }) {
                         mainBlock: {
                           notes: draft.mainBlock?.notes || '',
                           exerciseIds: draft.mainBlock?.exerciseIds || [],
+                          gymLayoutId: draft.mainBlock?.gymLayoutId || '',
+                          gymLayoutName: draft.mainBlock?.gymLayoutName || '',
                         },
                         extraBlock: {
                           notes: draft.extraBlock?.notes || '',
@@ -206,20 +210,12 @@ function DayEditor({ cycleId, weeks = 1, exercises }) {
           return (
             <Box key={weekIndex}>
               <Typography variant="subtitle2" fontWeight={900} sx={{ mb: 1 }}>
-                Semana {weekIndex}
+                Microciclo {weekIndex}
               </Typography>
               {weekContent}
             </Box>
           );
         }
-
-        const plannedExercises = weekDays.reduce(
-          (total, day) =>
-            total
-            + (day.mainBlock?.exerciseIds?.length || 0)
-            + (day.extraBlock?.exerciseIds?.length || 0),
-          0
-        );
 
         return (
           <Accordion
@@ -230,10 +226,10 @@ function DayEditor({ cycleId, weeks = 1, exercises }) {
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="subtitle1" fontWeight={900}>
-                  Semana {weekIndex}
+                  Microciclo {weekIndex}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {weekDays.length} días · {plannedExercises} ejercicios planificados
+                  {weekDays.length} sesiones planificadas
                 </Typography>
               </Box>
             </AccordionSummary>

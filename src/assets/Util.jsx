@@ -41,16 +41,16 @@ class Util {
         const diffMs = expireDate - now;
         const daysLeft = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-        if (daysLeft < -35) {
+        if (daysLeft < -20) {
             return 'gray'; // ⚪ Inactivo
         }
         if (daysLeft < 0) {
             return '#ff6060'; // 🔴 Vencido
         }
-        if (daysLeft <= 7) {
+        if (daysLeft <= 6) {
             return '#ffc061'; // 🟠 Próximo a vencer
         }
-        if (daysLeft <= 15) {
+        if (daysLeft <= 12) {
             return '#a9ff63'; // 🟡 Medio
         }
         return '#70ff63'; // 🟢 Activo
@@ -145,7 +145,7 @@ class Util {
         } else if (diffDays <= 7) {
             return `Hola, ${name}. Esperamos que estés muy bien 🫡 tu membresía está por vencer el ${membershipDate.toLocaleDateString()} podés renovarla en cualquier momento para seguir entrenando 🥊`;
         } else {
-            return `Hola, ${name}. Esperamos que estés muy bien 🫡 tu membresía ha sido renovada ✅ ya podés continuar entrenando con normalidad 🥊`;
+            return `Hola, ${name}. Esperamos que estés muy bien 🫡 tu membresía ha sido renovada hasta el ${membershipDate.toLocaleDateString()} ✅ ya podés continuar entrenando con normalidad 🥊`;
         }
     }
 
@@ -190,7 +190,7 @@ class Util {
     }
 
     isMembershipDisplayable(_date) {
-        const currentDate = new Date() -30 * 24 * 60 * 60 * 1000; // 30 days ago
+        const currentDate = new Date() -15 * 24 * 60 * 60 * 1000; // 15 days ago
         const membershipDate = new Date(this.getDateFromFirebase(_date));
         return membershipDate >= currentDate;
     }

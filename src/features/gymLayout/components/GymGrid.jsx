@@ -125,9 +125,7 @@ function GymGrid({
       {!isMobile && (
         <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid', borderColor: 'divider' }}>
           <Stack direction="row" spacing={1} alignItems="center">
-            <GridOnIcon color="primary" />
-            <Typography fontWeight={900}>Distribución del Plano</Typography>
-          </Stack>
+</Stack>
         </Box>
       )}
 

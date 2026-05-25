@@ -56,7 +56,7 @@ export const createGymExerciseModel = (values = {}) => ({
 
 export const createGymLayoutModel = (values = {}) => ({
   id: values.id || DEFAULT_LAYOUT_ID,
-  name: values.name || 'Plano principal',
+  name: values.name || 'Circuito principal',
   rows: DEFAULT_GRID_ROWS,
   cols: DEFAULT_GRID_COLS,
   items: Array.isArray(values.items) ? values.items.map(normalizeLayoutItem) : [],

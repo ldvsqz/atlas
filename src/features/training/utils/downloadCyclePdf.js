@@ -3,19 +3,32 @@ import { autoTable } from 'jspdf-autotable';
 import TrainingService from '../../../../Firebase/trainingService';
 import { BLOCK_LABELS, CYCLE_LABELS, normalizeFirestoreDate } from '../models/trainingModels';
 
-const getExerciseName = (exerciseId, exerciseMap) => {
-  const exercise = exerciseMap.get(exerciseId);
-  if (!exercise) return `Ejercicio no encontrado (${exerciseId})`;
-  return exercise.name;
-};
-
-const formatBlock = (block, exerciseMap) => {
-  const exerciseIds = block?.exerciseIds || [];
-  if (!exerciseIds.length) return 'Sin ejercicios';
-  return exerciseIds.map((exerciseId) => getExerciseName(exerciseId, exerciseMap)).join('\n');
-};
-
 const formatNotes = (block) => block?.notes?.trim() || 'Sin notas';
+
+const formatMainBlock = (block) => {
+  const layoutName = block?.gymLayoutName?.trim();
+  const lines = [];
+
+  if (layoutName) {
+    lines.push(`Circuito: ${layoutName}`);
+  }
+
+  lines.push(`Notas:\n${formatNotes(block)}`);
+
+  return lines.join('\n\n');
+};
+
+const countNotes = (days = []) =>
+  days.reduce(
+    (total, day) =>
+      total
+      + (day.shadowBlock?.notes?.trim() ? 1 : 0)
+      + (day.mainBlock?.notes?.trim() ? 1 : 0),
+    0
+  );
+
+const countLinkedLayouts = (days = []) =>
+  days.filter((day) => day.mainBlock?.gymLayoutId || day.mainBlock?.gymLayoutName).length;
 
 const groupDaysByWeek = (days) =>
   days.reduce((groups, day) => {
@@ -35,37 +48,49 @@ const sanitizeFileName = (value) =>
 
 export const downloadCyclePdf = async (cycle, exercises, providedDays = null) => {
   const doc = new jsPDF();
-  const exerciseMap = new Map(exercises.map((exercise) => [exercise.id, exercise]));
   const createdAt = normalizeFirestoreDate(cycle.createdAt);
 
-  doc.setFontSize(14);
+  doc.setTextColor(17, 24, 39);
+  doc.setFontSize(16);
   doc.text(cycle.name || 'Ciclo de entrenamiento', 14, 16);
 
   doc.setFontSize(9);
-  doc.text(`Tipo: ${CYCLE_LABELS[cycle.type] || cycle.type}`, 14, 26);
-  doc.text(`Creado: ${createdAt?.isValid() ? createdAt.format('DD/MM/YYYY') : 'Sin fecha'}`, 14, 31);
+  doc.setTextColor(75, 85, 99);
+  doc.text(`${CYCLE_LABELS[cycle.type] || cycle.type} · ${cycle.weeks || 1} microciclo${Number(cycle.weeks) === 1 ? '' : 's'}`, 14, 25);
+  doc.text(`Creado: ${createdAt?.isValid() ? createdAt.format('DD/MM/YYYY') : 'Sin fecha'}`, 14, 30);
 
   autoTable(doc, {
-    startY: 46,
-    theme: 'grid',
+    startY: 40,
+    theme: 'plain',
     head: [['Descripción']],
     body: [[cycle.description || 'Sin descripción']],
-    styles: { fontSize: 9, cellPadding: 3 },
-    headStyles: { fillColor: [69, 90, 100] },
+    styles: { fontSize: 9, cellPadding: 3, textColor: [31, 41, 55] },
+    headStyles: { fillColor: [241, 245, 249], textColor: [31, 41, 55], fontStyle: 'bold' },
+    bodyStyles: { fillColor: [249, 250, 251] },
   });
 
   const descriptionTable = doc.lastAutoTable;
-  const nextY = (descriptionTable?.finalY || 46) + 10;
-
   const days = providedDays || await TrainingService.getCycleDays(cycle.id, cycle.weeks);
+  let nextY = (descriptionTable?.finalY || 40) + 8;
+
+  autoTable(doc, {
+    startY: nextY,
+    theme: 'grid',
+    body: [[
+      `${Object.keys(groupDaysByWeek(days)).length || 1}\nSemanas`,
+      `${days.length}\nSesiones`,
+      `${countNotes(days)}\nNotas`,
+      `${countLinkedLayouts(days)}\nCircuitos vinculados`,
+    ]],
+    styles: { fontSize: 9, cellPadding: 3, halign: 'center', valign: 'middle' },
+    bodyStyles: { fillColor: [236, 253, 245], textColor: [6, 78, 59], fontStyle: 'bold' },
+  });
+
+  nextY = (doc.lastAutoTable?.finalY || nextY) + 10;
 
   if (days.length) {
     const groupedDays = groupDaysByWeek(days);
     let tableStartY = nextY;
-
-    doc.setFontSize(13);
-    doc.text('Días del ciclo', 14, tableStartY);
-    tableStartY += 8;
 
     Object.entries(groupedDays).forEach(([weekIndex, weekDays]) => {
       if (tableStartY > 260) {
@@ -74,25 +99,25 @@ export const downloadCyclePdf = async (cycle, exercises, providedDays = null) =>
       }
 
       doc.setFontSize(11);
-      doc.text(`Semana ${weekIndex}`, 14, tableStartY);
+      doc.setTextColor(17, 24, 39);
+      doc.text(`Microciclo ${weekIndex}`, 14, tableStartY);
 
       autoTable(doc, {
         startY: tableStartY + 4,
         theme: 'grid',
-        head: [['Día', BLOCK_LABELS.shadowBlock, BLOCK_LABELS.mainBlock, BLOCK_LABELS.extraBlock]],
+        head: [['Sesión', BLOCK_LABELS.shadowBlock, BLOCK_LABELS.mainBlock]],
         body: weekDays.map((day) => [
-          day.name || `Día ${day.dayIndex}`,
-          `${formatBlock(day.shadowBlock, exerciseMap)}\nNotas: ${formatNotes(day.shadowBlock)}`,
-          `${formatBlock(day.mainBlock, exerciseMap)}\nNotas: ${formatNotes(day.mainBlock)}`,
-          `${formatBlock(day.extraBlock, exerciseMap)}\nNotas: ${formatNotes(day.extraBlock)}`,
+          `${day.name || `Día ${day.dayIndex}`}\nDía ${day.dayOfWeek || day.dayIndex}`,
+          formatNotes(day.shadowBlock),
+          formatMainBlock(day.mainBlock),
         ]),
-        styles: { fontSize: 8, cellPadding: 2, valign: 'top' },
-        headStyles: { fillColor: [69, 90, 100], fontSize: 8 },
+        styles: { fontSize: 8.5, cellPadding: 3, valign: 'top', textColor: [31, 41, 55], lineColor: [226, 232, 240] },
+        headStyles: { fillColor: [34, 197, 94], textColor: [255, 255, 255], fontSize: 8.5, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
         columnStyles: {
-          0: { cellWidth: 20 },
-          1: { cellWidth: 55 },
-          2: { cellWidth: 58 },
-          3: { cellWidth: 55 },
+          0: { cellWidth: 30, fontStyle: 'bold' },
+          1: { cellWidth: 72 },
+          2: { cellWidth: 82 },
         },
       });
 

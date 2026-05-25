@@ -100,7 +100,7 @@ class GymLayoutService {
   async saveLayout(layout) {
     const layoutId = layout.id || DEFAULT_LAYOUT_ID;
     const payload = {
-      name: layout.name?.trim() || 'Plano principal',
+      name: layout.name?.trim() || 'Circuito principal',
       rows: DEFAULT_GRID_ROWS,
       cols: DEFAULT_GRID_COLS,
       items: removeReservedCollisions(layout.items, DEFAULT_GRID_ROWS, DEFAULT_GRID_COLS),

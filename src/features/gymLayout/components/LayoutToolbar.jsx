@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   CircularProgress,
-  MenuItem,
   Paper,
   Stack,
   TextField,
@@ -20,11 +19,9 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 
 function LayoutToolbar({
   layout,
-  layouts = [],
   placedCount = 0,
   saving = false,
   onChange,
-  onLoad,
   onSave,
   onNew,
   onClear,
@@ -50,32 +47,12 @@ function LayoutToolbar({
       >
         <Box>
           <Typography variant={isMobile ? 'body1' : 'h5'} fontWeight={900} sx={{ lineHeight: 1.2 }}>
-            {layout.name || 'Plano sin nombre'}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Malla fija 3x6 · <b>{placedCount}</b> en plano
+            {layout.name || 'Circuito sin nombre'}
           </Typography>
         </Box>
 
         <Stack direction="column" spacing={1} sx={{ width: { xs: '100%', md: 460 } }}>
           <Stack direction="row" spacing={1}>
-            <TextField
-              select
-              size="small"
-              label="Cargar Plano"
-              value={layout.id}
-              onChange={(event) => onLoad?.(event.target.value)}
-              fullWidth
-            >
-              <MenuItem value={layout.id}>{layout.name || 'Plano actual'}</MenuItem>
-              {layouts
-                .filter((savedLayout) => savedLayout.id !== layout.id)
-                .map((savedLayout) => (
-                  <MenuItem key={savedLayout.id} value={savedLayout.id}>
-                    {savedLayout.name}
-                  </MenuItem>
-                ))}
-            </TextField>
             <TextField
               size="small"
               label="Renombrar"
