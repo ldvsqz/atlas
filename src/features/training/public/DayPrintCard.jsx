@@ -1,13 +1,13 @@
 import React from 'react';
-import { Box, Divider, Stack, Typography } from '@mui/material';
-import ExercisePrintRow from './ExercisePrintRow';
+import { Box, Chip, Divider, Stack, Typography } from '@mui/material';
+import MapIcon from '@mui/icons-material/Map';
 import { getBlockTitle } from './publicCycleUtils';
 
-const BLOCKS = ['warmupBlock', 'shadowBlock', 'mainBlock', 'extraBlock'];
+const BLOCKS = ['shadowBlock', 'mainBlock'];
 
-function TrainingBlock({ blockKey, block, exerciseMap }) {
-  const exerciseIds = block?.exerciseIds || [];
+function TrainingBlock({ blockKey, block }) {
   const hasNotes = Boolean(block?.notes?.trim());
+  const hasLinkedLayout = blockKey === 'mainBlock' && Boolean(block?.gymLayoutId || block?.gymLayoutName);
 
   return (
     <Box
@@ -23,43 +23,40 @@ function TrainingBlock({ blockKey, block, exerciseMap }) {
         <Typography variant="overline" color="text.secondary" fontWeight={900}>
           {getBlockTitle(blockKey)}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
-          {exerciseIds.length} ejercicio{exerciseIds.length === 1 ? '' : 's'}
-        </Typography>
+        {hasLinkedLayout && (
+          <Chip
+            icon={<MapIcon />}
+            label={block.gymLayoutName || 'Circuito vinculado'}
+            size="small"
+            variant="outlined"
+            sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }}
+          />
+        )}
       </Stack>
 
       <Stack spacing={1}>
-        {exerciseIds.length ? (
-          exerciseIds.map((exerciseId, index) => (
-            <ExercisePrintRow
-              key={`${blockKey}-${exerciseId}-${index}`}
-              exercise={exerciseMap.get(String(exerciseId))}
-              index={index}
-              blockKey={blockKey}
-            />
-          ))
-        ) : (
-          blockKey === 'warmupBlock' ? (
-            <Typography variant="body2" color="text.secondary">
-              Calentamiento general indicado por el entrenador.
-            </Typography>
-          ) : null
-        )}
-
         {hasNotes && (
           <Box sx={{ bgcolor: 'action.hover', borderRadius: 1, p: 1.5 }}>
             <Typography variant="caption" color="text.secondary" fontWeight={800}>
               Notas del bloque
             </Typography>
-            <Typography variant="body2">{block.notes}</Typography>
+            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+              {block.notes}
+            </Typography>
           </Box>
+        )}
+
+        {!hasNotes && !hasLinkedLayout && (
+          <Typography variant="body2" color="text.secondary">
+            Sin notas registradas.
+          </Typography>
         )}
       </Stack>
     </Box>
   );
 }
 
-function DayPrintCard({ day, exerciseMap }) {
+function DayPrintCard({ day }) {
   return (
     <Box
       component="article"
@@ -84,7 +81,7 @@ function DayPrintCard({ day, exerciseMap }) {
           </Typography>
         </Box>
         <Typography variant="caption" color="text.secondary" sx={{ pt: 0.5 }}>
-          Semana {day.weekIndex || 1}
+          Microciclo {day.weekIndex || 1}
         </Typography>
       </Stack>
 
@@ -96,7 +93,6 @@ function DayPrintCard({ day, exerciseMap }) {
             key={blockKey}
             blockKey={blockKey}
             block={day[blockKey]}
-            exerciseMap={exerciseMap}
           />
         ))}
       </Stack>

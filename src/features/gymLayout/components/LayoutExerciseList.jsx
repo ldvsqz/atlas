@@ -56,9 +56,6 @@ function LayoutExerciseList({
         <Typography variant={isMobile ? 'body1' : 'h6'} fontWeight={900}>
           Orden de rutina
         </Typography>
-        <Typography variant="caption" color="text.secondary">
-          Lista generada según la posición del plano
-        </Typography>
       </Box>
 
       <Divider />
@@ -104,7 +101,7 @@ function LayoutExerciseList({
           <Box sx={{ py: 4, textAlign: 'center' }}>
             <Typography fontWeight={800} variant="body2">Sin ejercicios colocados</Typography>
             <Typography variant="caption" color="text.secondary">
-              Agrega elementos al plano para armar la lista.
+              Agrega elementos al circuito para armar la lista.
             </Typography>
           </Box>
         )}

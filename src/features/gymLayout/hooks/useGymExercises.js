@@ -15,7 +15,7 @@ export const useGymExercises = () => {
       setExercises(data);
     } catch (error) {
       console.error('Error loading gym exercises:', error);
-      showSnackbar('Error al cargar ejercicios del plano', 'error');
+      showSnackbar('Error al cargar estaciones del circuito', 'error');
       setExercises([]);
     } finally {
       setLoading(false);

@@ -7,7 +7,7 @@ import { useCycles } from '../hooks/useCycles';
 import DeleteConfirmationDialog from './DeleteConfirmationDialog';
 import { CYCLE_LABELS } from '../models/trainingModels';
 
-function CycleList({ exercises }) {
+function CycleList({ exercises = [] }) {
   const { cycles, loading, saving, createCycle, updateCycle, deleteCycle } = useCycles();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCycle, setEditingCycle] = useState(null);
@@ -24,7 +24,7 @@ function CycleList({ exercises }) {
         cycle.description,
         CYCLE_LABELS[cycle.type],
         cycle.type,
-        `${cycle.weeks} semanas`,
+        `${cycle.weeks} microciclos`,
       ]
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(value))

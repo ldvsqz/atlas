@@ -133,12 +133,12 @@ function Menu({ header, version,toggleThemeMode, themeMode }) {
         </ListItem>
         }
 
-        {currentRol == 0 && <ListItem key={"Plano del gimnasio"} disablePadding>
+        {currentRol == 0 && <ListItem key={"Circuitos del gimnasio"} disablePadding>
           <ListItemButton component={Link} to="/gym-layout">
             <ListItemIcon>
               <GridOnIcon />
             </ListItemIcon>
-            <ListItemText primary={"Plano del gimnasio"} />
+            <ListItemText primary={"Circuitos del gimnasio"} />
           </ListItemButton>
         </ListItem>
         }

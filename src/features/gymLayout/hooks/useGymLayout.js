@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import GymLayoutService from '../../../../Firebase/gymLayoutService';
 import { useSnackbar } from '../../../Components/snackbar/AtlasSnackbar';
 import {
@@ -12,6 +12,7 @@ export const useGymLayout = (layoutId = DEFAULT_LAYOUT_ID) => {
   const [layouts, setLayouts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const loadedLayoutIdRef = useRef(null);
   const { showSnackbar } = useSnackbar();
 
   const fetchLayouts = useCallback(async () => {
@@ -32,7 +33,7 @@ export const useGymLayout = (layoutId = DEFAULT_LAYOUT_ID) => {
       await fetchLayouts();
     } catch (error) {
       console.error('Error loading gym layout:', error);
-      showSnackbar('Error al cargar el plano del gimnasio', 'error');
+      showSnackbar('Error al cargar el circuito', 'error');
       setLayout(createGymLayoutModel({ id: nextLayoutId }));
     } finally {
       setLoading(false);
@@ -40,6 +41,8 @@ export const useGymLayout = (layoutId = DEFAULT_LAYOUT_ID) => {
   }, [fetchLayouts, layoutId, showSnackbar]);
 
   useEffect(() => {
+    if (loadedLayoutIdRef.current === layoutId) return;
+    loadedLayoutIdRef.current = layoutId;
     fetchLayoutById(layoutId);
   }, [fetchLayoutById, layoutId]);
 
@@ -79,10 +82,25 @@ export const useGymLayout = (layoutId = DEFAULT_LAYOUT_ID) => {
         listNotes: saved.listNotes,
       }));
       await fetchLayouts();
-      showSnackbar('Plano guardado correctamente', 'success');
+      showSnackbar('Circuito guardado correctamente', 'success');
     } catch (error) {
       console.error('Error saving gym layout:', error);
-      showSnackbar('Error al guardar el plano', 'error');
+      showSnackbar('Error al guardar el circuito', 'error');
+      throw error;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteLayout = async (layoutId) => {
+    try {
+      setSaving(true);
+      await GymLayoutService.deleteLayout(layoutId);
+      await fetchLayouts();
+      showSnackbar('Circuito eliminado correctamente', 'success');
+    } catch (error) {
+      console.error('Error deleting gym layout:', error);
+      showSnackbar('Error al eliminar el circuito', 'error');
       throw error;
     } finally {
       setSaving(false);
@@ -96,6 +114,7 @@ export const useGymLayout = (layoutId = DEFAULT_LAYOUT_ID) => {
     saving,
     setLayout: updateDraft,
     saveLayout,
+    deleteLayout,
     refreshLayout: () => fetchLayoutById(layout.id),
     loadLayout: fetchLayoutById,
   };

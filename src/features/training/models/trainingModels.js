@@ -160,19 +160,19 @@ export const validateCycleWeeks = (type, weeks) => {
   const parsedWeeks = Number(weeks);
 
   if (!Number.isFinite(parsedWeeks) || parsedWeeks < 1) {
-    return 'La duración debe ser de al menos 1 semana.';
+    return 'La duración debe ser de al menos 1 microciclo.';
   }
 
   if (type === CYCLE_TYPES.MACRO && parsedWeeks < 12) {
-    return 'Un macrociclo debe durar 12 semanas o más.';
+    return 'Un macrociclo debe durar 12 microciclos o más.';
   }
 
   if (type === CYCLE_TYPES.MESO && parsedWeeks >= 12) {
-    return 'Un mesociclo debe durar menos de 12 semanas.';
+    return 'Un mesociclo debe durar menos de 12 microciclos.';
   }
 
   if (type === CYCLE_TYPES.MICRO && parsedWeeks !== 1) {
-    return 'Un microciclo debe durar exactamente 1 semana.';
+    return 'Un microciclo debe durar exactamente 1 microciclo.';
   }
 
   return true;

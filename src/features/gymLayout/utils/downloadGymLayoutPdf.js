@@ -7,7 +7,7 @@ import {
 } from '../models/gymLayoutModels';
 
 const getSafeFileName = (value) =>
-  String(value || 'plano-gimnasio')
+  String(value || 'circuito-gimnasio')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-zA-Z0-9-_]+/g, '-')
@@ -53,7 +53,7 @@ export const downloadGymLayoutPdf = ({ layout, exercises = [], orderedExercises 
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
-  doc.text(layout.name || 'Plano del gimnasio', margin, 48);
+  doc.text(layout.name || 'Circuito del gimnasio', margin, 48);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);

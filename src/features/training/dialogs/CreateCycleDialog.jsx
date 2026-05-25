@@ -101,7 +101,7 @@ function CreateCycleDialog({ open, onClose, onSubmit, saving = false, type, cycl
                 <TextField
                   {...field}
                   type="number"
-                  label="Semanas"
+                  label="Microciclos"
                   inputProps={{ min: 1 }}
                   disabled={selectedType === CYCLE_TYPES.MICRO}
                   error={Boolean(errors.weeks)}

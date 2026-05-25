@@ -222,6 +222,8 @@ class TrainingService {
       mainBlock: {
         notes: dayData.mainBlock?.notes || '',
         exerciseIds: dayData.mainBlock?.exerciseIds || [],
+        gymLayoutId: dayData.mainBlock?.gymLayoutId || '',
+        gymLayoutName: dayData.mainBlock?.gymLayoutName || '',
       },
       extraBlock: {
         notes: dayData.extraBlock?.notes || '',

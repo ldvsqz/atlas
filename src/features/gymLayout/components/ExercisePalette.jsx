@@ -64,7 +64,7 @@ function ExercisePalette({
         
         {isMobile && selectedExercise && (
           <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 700, mt: 1, display: 'block', bgcolor: alpha(theme.palette.primary.main, 0.05), p: 1, borderRadius: 1 }}>
-            Seleccionado: "{selectedExercise.name}". Toca una celda vacía en el plano.
+            Seleccionado: "{selectedExercise.name}". Toca una celda vacía en el circuito.
           </Typography>
         )}
 
