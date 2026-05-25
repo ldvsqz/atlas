@@ -115,7 +115,7 @@ function User({ menu }) {
       const movement = {
         type: 'income',
         amount: 15000,
-        description: `Renovación de membresía - ${user.name}`,
+        description: `Renovación de ${user.name}`,
         date: new Date(),
         category: 'membresia'
       };
