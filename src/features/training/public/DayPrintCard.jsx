@@ -56,7 +56,62 @@ function TrainingBlock({ blockKey, block }) {
   );
 }
 
-function DayPrintCard({ day }) {
+function CircuitSummary({ block, circuitDetails }) {
+  const layout = circuitDetails?.layout;
+  const stations = circuitDetails?.stations || [];
+  const circuitName = block?.gymLayoutName || layout?.name || 'Circuito vinculado';
+
+  if (!block?.gymLayoutId && !block?.gymLayoutName) return null;
+
+  return (
+    <Box
+      sx={{
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 1,
+        p: { xs: 1.25, sm: 1.5 },
+        bgcolor: 'action.hover',
+      }}
+    >
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+        <MapIcon fontSize="small" color="primary" />
+        <Typography variant="subtitle2" fontWeight={900} sx={{ overflowWrap: 'anywhere' }}>
+          {circuitName}
+        </Typography>
+      </Stack>
+
+      {stations.length ? (
+        <Stack
+          component="ol"
+          spacing={0.5}
+          sx={{
+            pl: 2.5,
+            my: 0,
+            '& li::marker': { fontWeight: 800 },
+          }}
+        >
+          {stations.map((station) => (
+            <Typography component="li" variant="body2" key={station.id} sx={{ overflowWrap: 'anywhere' }}>
+              {station.name}
+            </Typography>
+          ))}
+        </Stack>
+      ) : (
+        <Typography variant="body2" color="text.secondary">
+          Circuito vinculado sin estaciones disponibles.
+        </Typography>
+      )}
+
+      {layout?.listNotes && (
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, whiteSpace: 'pre-wrap' }}>
+          {layout.listNotes}
+        </Typography>
+      )}
+    </Box>
+  );
+}
+
+function DayPrintCard({ day, circuitDetails }) {
   return (
     <Box
       component="article"
@@ -95,6 +150,7 @@ function DayPrintCard({ day }) {
             block={day[blockKey]}
           />
         ))}
+        <CircuitSummary block={day.mainBlock} circuitDetails={circuitDetails} />
       </Stack>
     </Box>
   );

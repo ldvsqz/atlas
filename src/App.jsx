@@ -18,6 +18,7 @@ import TrainingPage from "./features/training/pages/TrainingPage";
 import PublicCycleView from "./features/training/public/PublicCycleView";
 import GymLayoutPage from "./features/gymLayout/pages/GymLayoutPage";
 import packageInfo from '../package.json';
+import CashboxPage from "./Pages/Finance/CashboxHistory";
 
 
 function App() {
@@ -51,23 +52,27 @@ function App() {
       <CssBaseline />
       <Router>
         <RouteTracker>
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/reset" element={<ResetPassword />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/public/cycle/:id" element={<PublicCycleView />} />
-          <Route path="/cycle/:id" element={<PublicCycleView />} />
-          <Route path="/events" element={<Events menu={getMenu("Eventos")} />} />
-          <Route path="/users" element={<Users menu={getMenu("Personas")} />} />
-          <Route path="/finance" element={<Finance menu={getMenu("Finanzas")} />} />
-          <Route path="/training" element={<TrainingPage menu={getMenu("Planificación")} />} />
-          <Route path="/gym-layout" element={<GymLayoutPage menu={getMenu("Circuitos del gimnasio")} />} />
-          <Route path="/settings" element={<Settings menu={getMenu("Configuración")} />} />
-          <Route path="/exercises" element={<Exercises menu={getMenu("Ejercicios")} />} />
-          <Route path="/aboutus" element={<Aboutus menu={getMenu("Sobre nosotros")} />} />
-          <Route path="/user/:uid" element={<User menu={getMenu("Atlas")} />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+          <Routes>
+            <Route path="/" element={<Login />} />
+            <Route path="/reset" element={<ResetPassword />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/public/cycle/:id" element={<PublicCycleView />} />
+            <Route path="/cycle/:id" element={<PublicCycleView />} />
+            <Route path="/events" element={<Events menu={getMenu("Eventos")} />} />
+            <Route path="/users" element={<Users menu={getMenu("Personas")} />} />
+            <Route path="/finance" element={<Finance menu={getMenu("Finanzas")} />} />
+            <Route
+              path="/cashbox"
+              element={<CashboxPage menu={getMenu("Arqueo de caja")} />}
+            />
+            <Route path="/training" element={<TrainingPage menu={getMenu("Planificación")} />} />
+            <Route path="/gym-layout" element={<GymLayoutPage menu={getMenu("Circuitos del gimnasio")} />} />
+            <Route path="/settings" element={<Settings menu={getMenu("Configuración")} />} />
+            <Route path="/exercises" element={<Exercises menu={getMenu("Ejercicios")} />} />
+            <Route path="/aboutus" element={<Aboutus menu={getMenu("Sobre nosotros")} />} />
+            <Route path="/user/:uid" element={<User menu={getMenu("Atlas")} />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </RouteTracker>
       </Router>
     </ThemeProvider>

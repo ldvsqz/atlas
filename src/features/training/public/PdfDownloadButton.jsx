@@ -3,7 +3,7 @@ import { Button, CircularProgress } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import { downloadCyclePdf } from '../utils/downloadCyclePdf';
 
-function PdfDownloadButton({ cycle, exercises = [], days = [], disabled = false, onError, compact = false }) {
+function PdfDownloadButton({ cycle, exercises = [], days = [], circuitDetails = null, disabled = false, onError, compact = false }) {
   const [downloading, setDownloading] = useState(false);
 
   const handleDownload = async () => {
@@ -11,7 +11,7 @@ function PdfDownloadButton({ cycle, exercises = [], days = [], disabled = false,
 
     try {
       setDownloading(true);
-      await downloadCyclePdf(cycle, exercises, days);
+      await downloadCyclePdf(cycle, exercises, days, circuitDetails);
     } catch (error) {
       console.error('Error downloading public cycle PDF:', error);
       onError?.('No pudimos descargar el PDF del ciclo.');

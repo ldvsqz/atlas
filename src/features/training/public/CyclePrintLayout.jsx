@@ -41,7 +41,7 @@ function saveWeekExpansionState(cycleId, expandedWeeks) {
   }
 }
 
-const CyclePrintLayout = forwardRef(function CyclePrintLayout({ cycle, days, showHeader = true }, ref) {
+const CyclePrintLayout = forwardRef(function CyclePrintLayout({ cycle, days, showHeader = true, circuitDetails = {} }, ref) {
   const groupedDays = useMemo(() => groupDaysByWeek(days), [days]);
   const [expandedWeeks, setExpandedWeeks] = useState({});
 
@@ -197,7 +197,11 @@ const CyclePrintLayout = forwardRef(function CyclePrintLayout({ cycle, days, sho
                   <AccordionDetails sx={{ p: 0 }}>
                     <Stack spacing={2} sx={{ p: 2 }}>
                       {weekDays.map((day) => (
-                        <DayPrintCard key={day.id || day.dayIndex} day={day} />
+                        <DayPrintCard
+                          key={day.id || day.dayIndex}
+                          day={day}
+                          circuitDetails={circuitDetails[day.mainBlock?.gymLayoutId]}
+                        />
                       ))}
                     </Stack>
                   </AccordionDetails>

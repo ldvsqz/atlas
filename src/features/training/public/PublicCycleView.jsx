@@ -25,8 +25,10 @@ import TodayIcon from '@mui/icons-material/Today';
 import { useParams } from 'react-router-dom';
 import { CYCLE_LABELS, normalizeFirestoreDate } from '../models/trainingModels';
 import TrainingService from '../../../../Firebase/trainingService';
+import GymLayoutService from '../../../../Firebase/gymLayoutService';
 import CyclePrintLayout from './CyclePrintLayout';
 import PdfDownloadButton from './PdfDownloadButton';
+import { buildCircuitDetailsMap } from './circuitLayoutUtils';
 import {
   getPublicCycleUrl,
   groupDaysByWeek,
@@ -94,6 +96,7 @@ function PublicCycleHeader({
   onCopyLink,
   pdfDisabled,
   onPdfError,
+  circuitDetails,
 }) {
   return (
     <Container maxWidth="lg" className="no-print" sx={{ pt: { xs: 2, md: 3 }, pb: 1 }}>
@@ -137,6 +140,7 @@ function PublicCycleHeader({
                 <PdfDownloadButton
                   cycle={cycle}
                   days={days}
+                  circuitDetails={circuitDetails}
                   disabled={pdfDisabled}
                   onError={onPdfError}
                 />
@@ -188,6 +192,7 @@ function PublicCycleView() {
   const { id } = useParams();
   const [cycle, setCycle] = useState(null);
   const [days, setDays] = useState([]);
+  const [circuitDetails, setCircuitDetails] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -232,15 +237,31 @@ function PublicCycleView() {
         if (!publicCycle) {
           setCycle(null);
           setDays([]);
+          setCircuitDetails({});
           setError('Este ciclo no existe o no está marcado como público.');
           return;
         }
 
         const cycleDays = await TrainingService.getPublicCycleDays(publicCycle.id);
+        const linkedLayoutIds = [...new Set(
+          cycleDays
+            .map((day) => day.mainBlock?.gymLayoutId)
+            .filter(Boolean)
+        )];
+        let nextCircuitDetails = {};
+
+        if (linkedLayoutIds.length) {
+          const [layouts, gymExercises] = await Promise.all([
+            Promise.all(linkedLayoutIds.map((layoutId) => GymLayoutService.getLayout(layoutId))),
+            GymLayoutService.getExercises(),
+          ]);
+          nextCircuitDetails = buildCircuitDetailsMap({ layouts, exercises: gymExercises });
+        }
 
         if (mounted) {
           setCycle(publicCycle);
           setDays(cycleDays);
+          setCircuitDetails(nextCircuitDetails);
         }
       } catch (fetchError) {
         console.error('Error loading public cycle:', fetchError);
@@ -327,6 +348,7 @@ function PublicCycleView() {
             <PdfDownloadButton
               cycle={cycle}
               days={days}
+              circuitDetails={circuitDetails}
               disabled={loading || Boolean(error) || !cycle}
               onError={setError}
               compact
@@ -380,8 +402,9 @@ function PublicCycleView() {
             onCopyLink={handleCopyLink}
             pdfDisabled={loading || Boolean(error) || !cycle}
             onPdfError={setError}
+            circuitDetails={circuitDetails}
           />
-          <CyclePrintLayout cycle={cycle} days={days} showHeader={false} />
+          <CyclePrintLayout cycle={cycle} days={days} showHeader={false} circuitDetails={circuitDetails} />
         </>
       )}
 

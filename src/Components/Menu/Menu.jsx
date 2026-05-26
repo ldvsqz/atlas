@@ -1,7 +1,7 @@
-import React, { useState, useEffect, version } from "react";
-import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import Logout from "../Logout/Logout";
+
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
 import List from "@mui/material/List";
@@ -16,75 +16,82 @@ import AppBar from "@mui/material/AppBar";
 import Typography from "@mui/material/Typography";
 import Divider from "@mui/material/Divider";
 import GroupIcon from "@mui/icons-material/Group";
-import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import AccountBoxIcon from "@mui/icons-material/AccountBox";
-import SettingsIcon from '@mui/icons-material/Settings';
-import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
-import InfoIcon from '@mui/icons-material/Info';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
-import DarkModeIcon from '@mui/icons-material/DarkMode';
-import LightModeIcon from '@mui/icons-material/LightMode';
-import GridOnIcon from '@mui/icons-material/GridOn';
-import ToggleButton from '@mui/material/ToggleButton';
+import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
+import InfoIcon from "@mui/icons-material/Info";
+import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
+import GridOnIcon from "@mui/icons-material/GridOn";
+import ToggleButton from "@mui/material/ToggleButton";
+
 import { auth } from "../../../Firebase/authFunctions";
 import "./Menu.css";
 
-
-
-
-function Menu({ header, version,toggleThemeMode, themeMode }) {
-  const [uid, setUid] = useState(localStorage.getItem("UID"))
-  const [currentRol, setRol] = useState(localStorage.getItem("ROL"));
-  const [showMenu, setMenu] = useState(false);
-  const dark = localStorage.getItem("THEME");
-  const [darkTheme, setDarkTheme] = useState(dark == 'dark');
+function Menu({
+  header,
+  title,
+  version,
+  toggleThemeMode,
+}) {
   const navigate = useNavigate();
 
+  const [showMenu, setMenu] = useState(false);
+  const [uid, setUid] = useState(() => localStorage.getItem("UID"));
+  const [currentRol] = useState(() => localStorage.getItem("ROL"));
+  const [darkTheme, setDarkTheme] = useState(
+    () => localStorage.getItem("THEME") === "dark"
+  );
+
+  const menuTitle = header || title || "";
+  const isAdmin = String(currentRol) === "0";
+
   useEffect(() => {
-    const checkAuthState = () => {
-      const user = auth.currentUser;
-      if (!user) {
-        navigate('/'); // Redirect to the login page if user is not authenticated
-      }
-    };
-
-    checkAuthState(); // Check authentication state on component mount
-
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (!user) {
-        navigate('/'); // Redirect to the login page if user is not authenticated
+        navigate("/", { replace: true });
       }
     });
 
     return () => {
-      unsubscribe(); // Cleanup the auth state change listener on component unmount
+      unsubscribe();
     };
-  }, []);
-
+  }, [navigate]);
 
   useEffect(() => {
-    const theme = darkTheme ? 'dark' : 'light';
-    localStorage.setItem("THEME", theme);
+    localStorage.setItem("THEME", darkTheme ? "dark" : "light");
   }, [darkTheme]);
 
-
   const toggleDrawer = (open) => (event) => {
-    if (event.type === "keydown" && (event.key === "Tab" || event.key === "Shift")) {
+    if (
+      event?.type === "keydown" &&
+      (event.key === "Tab" || event.key === "Shift")
+    ) {
       return;
     }
+
     setMenu(open);
   };
 
   const handleOnNavigate = () => {
-    setUid(localStorage.getItem("UID"));
-    navigate(`/user/${uid}`, { state: { uid } });
-  }
+    const storedUid = localStorage.getItem("UID");
 
-  const handleOnswitchTheme = () => {
-    toggleThemeMode()
-    setDarkTheme(!darkTheme);
-  }
+    setUid(storedUid);
 
+    if (storedUid) {
+      navigate(`/user/${storedUid}`, {
+        state: { uid: storedUid },
+      });
+    }
+  };
+
+  const handleOnSwitchTheme = () => {
+    if (typeof toggleThemeMode === "function") {
+      toggleThemeMode();
+    }
+
+    setDarkTheme((currentValue) => !currentValue);
+  };
 
   const list = () => (
     <Box
@@ -94,78 +101,82 @@ function Menu({ header, version,toggleThemeMode, themeMode }) {
       onKeyDown={toggleDrawer(false)}
     >
       <List>
-        <ListItem key={"Mi perfil"} disablePadding>
-          <ListItemButton onClick={() => handleOnNavigate()}>
+        <ListItem key="Mi perfil" disablePadding>
+          <ListItemButton onClick={handleOnNavigate}>
             <ListItemIcon>
               <AccountBoxIcon />
             </ListItemIcon>
-            <ListItemText primary={"Mi perfil"} />
+            <ListItemText primary="Mi perfil" />
           </ListItemButton>
         </ListItem>
 
-        {currentRol == 0 && <ListItem key={"Personas"} disablePadding>
-          <ListItemButton component={Link} to="/users">
-            <ListItemIcon>
-              <GroupIcon />
-            </ListItemIcon>
-            <ListItemText primary={"Personas"} />
-          </ListItemButton>
-        </ListItem>
-        }
+        {isAdmin && (
+          <ListItem key="Personas" disablePadding>
+            <ListItemButton component={Link} to="/users">
+              <ListItemIcon>
+                <GroupIcon />
+              </ListItemIcon>
+              <ListItemText primary="Personas" />
+            </ListItemButton>
+          </ListItem>
+        )}
 
-        {currentRol == 0 && <ListItem key={"Finanzas"} disablePadding>
-          <ListItemButton component={Link} to="/finance">
-            <ListItemIcon>
-              <AttachMoneyIcon />
-            </ListItemIcon>
-            <ListItemText primary={"Finanzas"} />
-          </ListItemButton>
-        </ListItem>
-        }
+        {isAdmin && (
+          <ListItem key="Finanzas" disablePadding>
+            <ListItemButton component={Link} to="/finance">
+              <ListItemIcon>
+                <AttachMoneyIcon />
+              </ListItemIcon>
+              <ListItemText primary="Finanzas" />
+            </ListItemButton>
+          </ListItem>
+        )}
 
-        {currentRol == 0 && <ListItem key={"Planificación"} disablePadding>
-          <ListItemButton component={Link} to="/training">
-            <ListItemIcon>
-              <FitnessCenterIcon />
-            </ListItemIcon>
-            <ListItemText primary={"Planificación"} />
-          </ListItemButton>
-        </ListItem>
-        }
+        {isAdmin && (
+          <ListItem key="Planificación" disablePadding>
+            <ListItemButton component={Link} to="/training">
+              <ListItemIcon>
+                <FitnessCenterIcon />
+              </ListItemIcon>
+              <ListItemText primary="Planificación" />
+            </ListItemButton>
+          </ListItem>
+        )}
 
-        {currentRol == 0 && <ListItem key={"Circuitos del gimnasio"} disablePadding>
-          <ListItemButton component={Link} to="/gym-layout">
-            <ListItemIcon>
-              <GridOnIcon />
-            </ListItemIcon>
-            <ListItemText primary={"Circuitos del gimnasio"} />
-          </ListItemButton>
-        </ListItem>
-        }
+        {isAdmin && (
+          <ListItem key="Circuitos del gimnasio" disablePadding>
+            <ListItemButton component={Link} to="/gym-layout">
+              <ListItemIcon>
+                <GridOnIcon />
+              </ListItemIcon>
+              <ListItemText primary="Circuitos del gimnasio" />
+            </ListItemButton>
+          </ListItem>
+        )}
 
-        <ListItem key={"Sobre nosotros"} disablePadding>
+        <ListItem key="Sobre nosotros" disablePadding>
           <ListItemButton component={Link} to="/aboutus">
             <ListItemIcon>
               <InfoIcon sx={{ color: "#ff5722" }} />
             </ListItemIcon>
-            <ListItemText primary={"Sobre nosotros"} />
+            <ListItemText primary="Sobre nosotros" />
           </ListItemButton>
         </ListItem>
 
         <Divider />
-        <ListItem key={"logout"} disablePadding>
+
+        <ListItem key="logout" disablePadding>
           <Logout />
         </ListItem>
       </List>
-    </Box >
+    </Box>
   );
-
 
   return (
     <div>
       <Box sx={{ flexGrow: 1 }}>
-        <AppBar position="static" >
-          <Toolbar >
+        <AppBar position="static">
+          <Toolbar>
             <IconButton
               sx={{ width: 50 }}
               onClick={toggleDrawer(true)}
@@ -174,15 +185,26 @@ function Menu({ header, version,toggleThemeMode, themeMode }) {
             >
               <MenuIcon />
             </IconButton>
-            <Typography variant="h6" sx={{ marginRight: "auto" }} className="header-text">
-              {header}
-              <div className="version-text">{version}</div>
+
+            <Typography
+              variant="h6"
+              sx={{ marginRight: "auto" }}
+              className="header-text"
+            >
+              {menuTitle}
+
+              {version && (
+                <div className="version-text">
+                  {version}
+                </div>
+              )}
             </Typography>
+
             <div style={{ marginLeft: "auto" }}>
               <ToggleButton
-                value=""
+                value="theme"
                 selected={darkTheme}
-                onChange={() => { handleOnswitchTheme(!darkTheme) }}
+                onChange={handleOnSwitchTheme}
               >
                 {darkTheme ? <LightModeIcon /> : <DarkModeIcon />}
               </ToggleButton>
@@ -190,8 +212,9 @@ function Menu({ header, version,toggleThemeMode, themeMode }) {
           </Toolbar>
         </AppBar>
       </Box>
+
       <Drawer
-        anchor={"left"}
+        anchor="left"
         open={showMenu}
         onClose={toggleDrawer(false)}
       >
