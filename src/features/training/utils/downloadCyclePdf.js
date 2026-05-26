@@ -1,16 +1,59 @@
 import jsPDF from 'jspdf';
 import { autoTable } from 'jspdf-autotable';
 import TrainingService from '../../../../Firebase/trainingService';
+import GymLayoutService from '../../../../Firebase/gymLayoutService';
 import { BLOCK_LABELS, CYCLE_LABELS, normalizeFirestoreDate } from '../models/trainingModels';
+import { buildCircuitDetailsMap } from '../public/circuitLayoutUtils';
 
 const formatNotes = (block) => block?.notes?.trim() || 'Sin notas';
 
-const formatMainBlock = (block) => {
+const getLinkedLayoutIds = (days = []) => [...new Set(
+  days
+    .map((day) => day.mainBlock?.gymLayoutId)
+    .filter(Boolean)
+)];
+
+const loadCircuitDetails = async (days = []) => {
+  const linkedLayoutIds = getLinkedLayoutIds(days);
+  if (!linkedLayoutIds.length) return {};
+
+  const [layouts, gymExercises] = await Promise.all([
+    Promise.all(linkedLayoutIds.map((layoutId) => GymLayoutService.getLayout(layoutId))),
+    GymLayoutService.getExercises(),
+  ]);
+
+  return buildCircuitDetailsMap({ layouts, exercises: gymExercises });
+};
+
+const formatCircuit = (block, circuitDetails) => {
   const layoutName = block?.gymLayoutName?.trim();
+  const layout = circuitDetails?.layout;
+  const stations = circuitDetails?.stations || [];
   const lines = [];
 
-  if (layoutName) {
-    lines.push(`Circuito: ${layoutName}`);
+  if (layoutName || layout?.name) {
+    lines.push(`Circuito: ${layoutName || layout.name}`);
+  }
+
+  if (stations.length) {
+    lines.push(`Estaciones:\n${stations.map((station, index) => `${index + 1}. ${station.name}`).join('\n')}`);
+  } else if (block?.gymLayoutId || layoutName) {
+    lines.push('Estaciones: no disponibles');
+  }
+
+  if (layout?.listNotes?.trim()) {
+    lines.push(`Notas del circuito:\n${layout.listNotes.trim()}`);
+  }
+
+  return lines.join('\n\n');
+};
+
+const formatMainBlock = (block, circuitDetails) => {
+  const lines = [];
+  const circuit = formatCircuit(block, circuitDetails);
+
+  if (circuit) {
+    lines.push(circuit);
   }
 
   lines.push(`Notas:\n${formatNotes(block)}`);
@@ -46,7 +89,7 @@ const sanitizeFileName = (value) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'ciclo';
 
-export const downloadCyclePdf = async (cycle, exercises, providedDays = null) => {
+export const downloadCyclePdf = async (cycle, exercises, providedDays = null, providedCircuitDetails = null) => {
   const doc = new jsPDF();
   const createdAt = normalizeFirestoreDate(cycle.createdAt);
 
@@ -71,6 +114,7 @@ export const downloadCyclePdf = async (cycle, exercises, providedDays = null) =>
 
   const descriptionTable = doc.lastAutoTable;
   const days = providedDays || await TrainingService.getCycleDays(cycle.id, cycle.weeks);
+  const circuitDetails = providedCircuitDetails || await loadCircuitDetails(days);
   let nextY = (descriptionTable?.finalY || 40) + 8;
 
   autoTable(doc, {
@@ -109,7 +153,7 @@ export const downloadCyclePdf = async (cycle, exercises, providedDays = null) =>
         body: weekDays.map((day) => [
           `${day.name || `Día ${day.dayIndex}`}\nDía ${day.dayOfWeek || day.dayIndex}`,
           formatNotes(day.shadowBlock),
-          formatMainBlock(day.mainBlock),
+          formatMainBlock(day.mainBlock, circuitDetails[day.mainBlock?.gymLayoutId]),
         ]),
         styles: { fontSize: 8.5, cellPadding: 3, valign: 'top', textColor: [31, 41, 55], lineColor: [226, 232, 240] },
         headStyles: { fillColor: [34, 197, 94], textColor: [255, 255, 255], fontSize: 8.5, fontStyle: 'bold' },
