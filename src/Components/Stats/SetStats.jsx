@@ -16,6 +16,75 @@ import Dialog from '@mui/material/Dialog';
 import Util from '../../assets/Util';
 import './SetStats.css';
 
+const numericFields = [
+  'weight_kg',
+  'weight_kg_end',
+  'Height_cm',
+  'IMC',
+  'body_fat',
+  'muscle',
+  'visceral_fat',
+  'metabolic_age',
+  'kcal',
+  'chest_back_cm',
+  'waist_cm',
+  'abdomen_cm',
+  'hip_cm',
+  'r_amr_cm',
+  'l_amr_cm',
+  'r_quad_cm',
+  'l_quad_cm',
+  'r_calf_cm',
+  'l_calf_cm',
+];
+
+const buildStatsState = (stats, uid, isEditing) => {
+  const baseStats = new StatsModel();
+  const sourceStats = stats && Object.keys(stats).length ? stats : {};
+  const nextStats = {
+    ...baseStats,
+    ...sourceStats,
+    uid: sourceStats.uid || uid,
+    habits: {
+      ...baseStats.habits,
+      ...(sourceStats.habits || {}),
+    },
+    considerations: {
+      ...baseStats.considerations,
+      ...(sourceStats.considerations || {}),
+    },
+  };
+
+  if (!isEditing) {
+    nextStats.id = '';
+    nextStats.date = Timestamp.fromDate(new Date());
+  }
+
+  return nextStats;
+};
+
+const normalizeStatsForSave = (stats, uid) => {
+  const normalizedStats = {
+    ...buildStatsState(stats, uid, true),
+    uid: stats.uid || uid,
+    considerations: {
+      recent_surgeries: stats.considerations?.recent_surgeries || 'Ninguna',
+      risks_factors: stats.considerations?.risks_factors || 'Ninguna',
+    },
+    habits: {
+      smoke: Boolean(stats.habits?.smoke),
+      drink: Boolean(stats.habits?.drink),
+      running: Boolean(stats.habits?.running),
+      lifting: Boolean(stats.habits?.lifting),
+    },
+  };
+
+  numericFields.forEach((field) => {
+    normalizedStats[field] = Number(normalizedStats[field] || 0);
+  });
+
+  return normalizedStats;
+};
 
 function SetStats({ stats = new StatsModel(), uid = '', isEditing = false, onSave }) {
   const [statsState, setStatsState] = useState(new StatsModel());
@@ -25,14 +94,8 @@ function SetStats({ stats = new StatsModel(), uid = '', isEditing = false, onSav
   const util = new Util();
 
   useEffect(() => {
-    if (!!stats) {
-      setStatsState(stats)
-    } else {
-      const stats = new StatsModel();
-      stats.uid = uid;
-      setStatsState(stats)
-    }
-  }, []);
+    setStatsState(buildStatsState(stats, uid, isEditing));
+  }, [stats, uid, isEditing]);
 
   useEffect(() => {
     const weight = parseFloat(statsState.weight_kg) || 0;
@@ -47,29 +110,33 @@ function SetStats({ stats = new StatsModel(), uid = '', isEditing = false, onSav
     }
   }, [statsState.weight_kg, statsState.Height_cm]);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const updatedStats = { ...statsState };
-    updatedStats.weight_kg = updatedStats.weight_kg ? updatedStats.weight_kg : 0.00;
-    updatedStats.weight_kg_end = updatedStats.weight_kg_end ? updatedStats.weight_kg_end : 0.00;
-    updatedStats.Height_cm = updatedStats.Height_cm ? updatedStats.Height_cm : 0;
-    updatedStats.considerations.recent_surgeries = updatedStats.considerations.recent_surgeries ? updatedStats.considerations.recent_surgeries : 'Ninguna';
-    updatedStats.considerations.risks_factors = updatedStats.considerations.risks_factors ? updatedStats.considerations.risks_factors : 'Ninguna';
-    handleClose();
-    if (isEditing) {
-      StatsService.update(updatedStats.id, updatedStats);
-    } else {
-      updatedStats.date = Timestamp.fromDate(new Date());
-      StatsService.add(updatedStats);
+    const updatedStats = normalizeStatsForSave(statsState, uid);
+
+    try {
+      let savedStats;
+      if (isEditing && updatedStats.id) {
+        savedStats = await StatsService.update(updatedStats.id, updatedStats);
+      } else {
+        delete updatedStats.id;
+        updatedStats.uid = uid;
+        updatedStats.date = Timestamp.fromDate(new Date());
+        savedStats = await StatsService.add(updatedStats);
+      }
+
+      handleClose();
+      onSave(savedStats || updatedStats);
+    } catch (error) {
+      console.error('Error saving stats:', error);
     }
-    onSave(updatedStats);
   };
 
 
   return (
     <>
-      <Button fullwidth variant="outlined" onClick={handleOpen}>
-        {isEditing ? 'Editar ultimas medidas' : 'Agregar nuevas medidas'}
+      <Button fullWidth variant="outlined" onClick={handleOpen}>
+        {isEditing ? 'Editar últimas medidas' : 'Agregar nuevas medidas'}
       </Button>
       <Dialog
         open={open}
@@ -159,11 +226,10 @@ function SetStats({ stats = new StatsModel(), uid = '', isEditing = false, onSav
             Consideraciones
           </Typography>
           <Grid container sx={{ color: 'text.primary' }}>
-            {/*
             <Grid item xs={6} sx={{ mt: 2 }}>
               <TextField id="standard-basic" label="Cirugías recientes" variant="standard" sx={{ maxWidth: '90%', padding: '10px' }}
                 type="text"
-                value={statsState.considerations.recent_surgeries}
+                value={statsState.considerations?.recent_surgeries || ''}
                 onChange={(event) =>
                   setStatsState({
                     ...statsState,
@@ -172,7 +238,6 @@ function SetStats({ stats = new StatsModel(), uid = '', isEditing = false, onSav
                 }
               />
             </Grid>
-            */}
             <Grid item xs={6} sx={{ mt: 2 }}>
               <TextField id="standard-basic" label="Factores de riesgo" variant="standard" sx={{ maxWidth: '90%', padding: '10px' }}
                 type="text"

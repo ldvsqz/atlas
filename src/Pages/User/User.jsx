@@ -16,6 +16,7 @@ import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Button from '@mui/material/Button';
+import MuiAlert from '@mui/material/Alert';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -23,12 +24,14 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContentText from '@mui/material/DialogContentText';
 import CircularProgress from '@mui/material/CircularProgress';
 import Backdrop from '@mui/material/Backdrop';
+import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
+import InsightsIcon from '@mui/icons-material/Insights';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 //components
 import Menu from '../../Components/Menu/Menu';
 import SetUser from "./SetUser";
 import Alert from '../../Components/Alert/Alert';
 import SetStats from '../../Components/Stats/SetStats';
-import Stats from '../../Components/Stats/Stats';
 import { useSnackbar } from '../../Components/snackbar/AtlasSnackbar';
 //serives and utilities
 import StatService from '../../../Firebase/statsService';
@@ -39,11 +42,25 @@ import UserModel from "../../models/UserModel";
 import { Timestamp } from 'firebase/firestore';
 import 'firebase/firestore';
 
+const getStatDate = (stat) => {
+  if (!stat?.date) return null;
+  if (stat.date.toDate) return stat.date.toDate();
+  if (stat.date.seconds) return new Date(stat.date.seconds * 1000);
+  const parsedDate = new Date(stat.date);
+  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+};
+
+const toChartNumber = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
 function User({ menu }) {
   const location = useLocation();
   const util = new Util();
   const [user, setUser] = useState(new UserModel());
   const [stats, setStats] = useState({});
+  const [statsHistory, setStatsHistory] = useState([]);
   const [routine, setRoutine] = useState({});
   const [loading, setLoading] = useState(true);
   const [currentRol, setRol] = useState(localStorage.getItem("ROL"));
@@ -68,12 +85,16 @@ function User({ menu }) {
     const fetchClientData = async () => {
       try {
         setLoading(true);
-        const userData = await UserService.get(uid);
-        const userStats = await StatService.getLast(uid);
-        const userRoutine = await RoutineService.getLast(uid);
+        const [userData, userStats, userStatsHistory, userRoutine] = await Promise.all([
+          UserService.get(uid),
+          StatService.getLast(uid),
+          StatService.getAllByUID(uid),
+          RoutineService.getLast(uid),
+        ]);
 
         setUser(userData || new UserModel());
         setStats(userStats || {});
+        setStatsHistory(userStatsHistory || []);
         setRoutine(userRoutine || {});
       } catch (err) {
         console.error('Error fetching user data', err);
@@ -106,8 +127,12 @@ function User({ menu }) {
   }
 
   async function handleOnSaveStats() {
-    const userStats = await StatService.getLast(user.uid);
-    setStats(userStats)
+    const [userStats, userStatsHistory] = await Promise.all([
+      StatService.getLast(user.uid),
+      StatService.getAllByUID(user.uid),
+    ]);
+    setStats(userStats || {});
+    setStatsHistory(userStatsHistory || []);
   }
 
   function handleOnCopyNumber(number) {
@@ -148,6 +173,27 @@ function User({ menu }) {
       setIsOperationLoading(false);
     }
   }
+
+  const statsChartData = statsHistory
+    .map((stat) => {
+      const date = getStatDate(stat);
+      return {
+        date,
+        label: date ? util.formatDateShort(date) : '—',
+        pesoBase: toChartNumber(stat.weight_kg),
+        imc: toChartNumber(stat.IMC),
+      };
+    })
+    .filter((item) => item.date)
+    .sort((a, b) => a.date - b.date);
+
+  const latestConsiderations = stats?.considerations || {};
+  const recentSurgeries = latestConsiderations.recent_surgeries || 'Ninguna';
+  const riskFactors = latestConsiderations.risks_factors || 'Ninguna';
+  const hasMedicalConsiderations = [recentSurgeries, riskFactors].some((value) => {
+    const normalizedValue = value.toString().trim().toLowerCase();
+    return normalizedValue && normalizedValue !== 'ninguna';
+  });
 
 
   return (
@@ -267,46 +313,103 @@ function User({ menu }) {
                 </Card>
               </Grid>
               <Grid item xs={12} md={5}>
-                <Card sx={{ borderRadius: 3, boxShadow: 2 }}>
-                  <CardContent>
-                    <Typography variant="h6" mb={2}>Medidas del {util.formatDate(util.getDateFromFirebase(stats.date)) || '—'}</Typography>
-                    {stats && stats.date ? (
+                <Stack spacing={2}>
+                  <Card sx={{ borderRadius: 3, boxShadow: 2 }}>
+                    <CardContent>
+                      <Typography variant="h6" mb={2}>Medidas del {util.formatDate(util.getDateFromFirebase(stats.date)) || '—'}</Typography>
+                      {stats && stats.date ? (
+                        <Grid container spacing={1}>
+                          <Grid item xs={6}>
+                            <Typography variant="subtitle2" color="text.secondary">Estatura</Typography>
+                            <Typography variant="body1">{stats.Height_cm ?? '—'} cm</Typography>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Typography variant="subtitle2" color="text.secondary">Peso base</Typography>
+                            <Typography variant="body1">{stats.weight_kg ?? '—'} kg</Typography>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Typography variant="subtitle2" color="text.secondary">Peso salida</Typography>
+                            <Typography variant="body1">{stats.weight_kg_end ?? '—'} kg</Typography>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Typography variant="subtitle2" color="text.secondary">IMC</Typography>
+                            <Typography variant="body1">{stats.IMC ?? '—'}</Typography>
+                          </Grid>
+                        </Grid>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">No tiene medidas registradas</Typography>
+                      )}
+                    </CardContent>
+                    <CardActions sx={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, p: 2 }}>
                       <Grid container spacing={1}>
                         <Grid item xs={6}>
-                          <Typography variant="subtitle2" color="text.secondary">Estatura</Typography>
-                          <Typography variant="body1">{stats.Height_cm ?? '—'} cm</Typography>
+                          {currentRol == 0 && <SetStats stats={stats} uid={user.uid} isEditing={false} onSave={handleOnSaveStats} />}
                         </Grid>
                         <Grid item xs={6}>
-                          <Typography variant="subtitle2" color="text.secondary">Peso base</Typography>
-                          <Typography variant="body1">{stats.weight_kg ?? '—'} kg</Typography>
-                        </Grid>
-                        <Grid item xs={6}>
-                          <Typography variant="subtitle2" color="text.secondary">Peso salida</Typography>
-                          <Typography variant="body1">{stats.weight_kg_end ?? '—'} kg</Typography>
-                        </Grid>
-                        <Grid item xs={6}>
-                          <Typography variant="subtitle2" color="text.secondary">IMC</Typography>
-                          <Typography variant="body1">{stats.IMC ?? '—'}</Typography>
+                          {currentRol == 0 && stats.date && <SetStats stats={stats} uid={user.uid} isEditing={true} onSave={handleOnSaveStats} />}
                         </Grid>
                       </Grid>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">No tiene medidas registradas</Typography>
-                    )}
-                  </CardContent>
-                  <CardActions sx={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, p: 2 }}>
-                    <Grid container spacing={1}>
-                      <Grid item xs={6}>
-                        {currentRol == 0 && <SetStats stats={stats} uid={user.uid} isEditing={false} onSave={handleOnSaveStats} />}
-                      </Grid>
-                      <Grid item xs={6}>
-                        {currentRol == 0 && stats.date && <SetStats stats={stats} uid={user.uid} isEditing={true} onSave={handleOnSaveStats} />}
-                      </Grid>
-                    </Grid>
-                  </CardActions>
-                </Card>
+                    </CardActions>
+                  </Card>
+
+                  <Card sx={{ borderRadius: 3, boxShadow: 2 }}>
+                    <CardContent>
+                      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                        <HealthAndSafetyIcon color={hasMedicalConsiderations ? 'warning' : 'success'} />
+                        <Typography variant="h6">Consideraciones médicas</Typography>
+                      </Stack>
+                      {stats && stats.date ? (
+                        <Stack spacing={1.5}>
+                          <MuiAlert severity={hasMedicalConsiderations ? 'warning' : 'success'} variant="outlined">
+                            {hasMedicalConsiderations
+                              ? 'Revisar estas consideraciones antes de planificar entrenamientos.'
+                              : 'Sin consideraciones médicas relevantes registradas.'}
+                          </MuiAlert>
+                          <Box>
+                            <Typography variant="subtitle2" color="text.secondary">Cirugías recientes</Typography>
+                            <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>{recentSurgeries}</Typography>
+                          </Box>
+                          <Box>
+                            <Typography variant="subtitle2" color="text.secondary">Factores de riesgo</Typography>
+                            <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>{riskFactors}</Typography>
+                          </Box>
+                        </Stack>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">No hay consideraciones registradas.</Typography>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Stack>
               </Grid>
             </Grid>
-            <Divider />
+            <Card sx={{ borderRadius: 3, boxShadow: 2, mt: 3 }}>
+              <CardContent>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                  <InsightsIcon color="primary" />
+                  <Typography variant="h6">Evolución física</Typography>
+                </Stack>
+                {statsChartData.length > 1 ? (
+                  <Box sx={{ width: '100%', height: { xs: 280, md: 340 } }}>
+                    <ResponsiveContainer>
+                      <LineChart data={statsChartData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="label" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="pesoBase" name="Peso base" stroke="#2e7d32" strokeWidth={2} connectNulls />
+                        <Line type="monotone" dataKey="imc" name="IMC" stroke="#ed6c02" strokeWidth={2} connectNulls />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </Box>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    Se necesitan al menos dos registros de medidas para mostrar gráficos.
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+            <Divider sx={{ my: 3 }} />
             {/* 
             <Grid container sx={{ color: 'text.primary' }}>
               <Grid item xs={currentRol == 0 ? 6 : 12}>

@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { Timestamp } from 'firebase/firestore';
 import {
     Container,
-    Box,
     TextField,
     Button,
     Table,
@@ -29,695 +24,286 @@ import {
     Grid,
     Card,
     CardContent,
-    IconButton,
-    Alert as MuiAlert,
-    Divider
+    IconButton
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
+import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
+import Menu from '../../Components/Menu/Menu';
 import FinanceService from '../../../Firebase/financeService';
 import Util from '../../assets/Util';
-import CashboxHistory from './CashboxHistory';
 import FinanceModel from '../../models/FinanceModel';
 import './Finance.css';
-import jsPDF from 'jspdf';
-import { autoTable } from 'jspdf-autotable';
-
 import dayjs from 'dayjs';
-
 import { useSnackbar } from '../../Components/snackbar/AtlasSnackbar';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
+const isMonthParam = (value) => /^\d{4}-\d{2}$/.test(value || '');
 
-
-const today = dayjs();
-
-const CURRENCY_SYMBOL = '';
-
-const formatCurrency = (amount) => `${CURRENCY_SYMBOL}${Number(amount || 0).toFixed(2)}`;
-const formatMonth = (month) => (month ? dayjs(month, 'YYYY-MM').format('MMMM YYYY') : '-');
-
-const getFinanceDate = (finance) => {
-    if (finance.date instanceof Date) return finance.date;
-    if (finance.date?.seconds) return new Date(finance.date.seconds * 1000);
-    return new Date(finance.date);
+const getMovementDate = (movement) => {
+    if (!movement?.date) return null;
+    if (movement.date.toDate) return movement.date.toDate();
+    if (movement.date.seconds) return new Date(movement.date.seconds * 1000);
+    const parsedDate = new Date(movement.date);
+    return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
 };
 
-function Finance({ menu }) {
+const getMovementMonth = (movement) => {
+    const date = getMovementDate(movement);
+    return date ? dayjs(date).format('YYYY-MM') : '';
+};
 
-    const [finances, setFinances] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [open, setOpen] = useState(false);
-    const [editingId, setEditingId] = useState(null);
-    const [formData, setFormData] = useState(new FinanceModel());
-    const [user, setUser] = useState(null);
-    const [currentRol, setRol] = useState(localStorage.getItem("ROL"));
-    const [currentUid, setCurrentUid] = useState(localStorage.getItem("UID"));
-    const [cashboxMonth, setCashboxMonth] = useState(today.format('YYYY-MM'));
-    const [debtAmount, setDebtAmount] = useState(120000);
-    const [distributionPercentages, setDistributionPercentages] = useState({
-        first: 40,
-        second: 40,
-        third: 20,
-    });
-    const [savedCashbox, setSavedCashbox] = useState(null);
-    const [cashboxLoading, setCashboxLoading] = useState(false);
-    const [cashboxSaving, setCashboxSaving] = useState(false);
-    const [cashboxHistory, setCashboxHistory] = useState([]);
-    const [historyOpen, setHistoryOpen] = useState(false);
-    const [historyLoading, setHistoryLoading] = useState(false);
+function Finance() {
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const initialMonth = searchParams.get('month');
     const util = new Util();
+    const [loading, setLoading] = useState(true);
+    const [allFinances, setAllFinances] = useState([]); 
+    const [finances, setFinances] = useState([]);       
+    const [selectedMonth, setSelectedMonth] = useState(isMonthParam(initialMonth) ? initialMonth : dayjs().format('YYYY-MM'));
+    const [openModal, setOpenModal] = useState(false);
+    const [currentMovement, setCurrentMovement] = useState(new FinanceModel());
+    const [isEditing, setIsEditing] = useState(false);
+    const { showSnackbar } = useSnackbar();
+
+    const [totalIncomes, setTotalIncomes] = useState(0);
+    const [totalExpenses, setTotalExpenses] = useState(0);
+    const [netBalance, setNetBalance] = useState(0);
 
     const incomeCategories = ['Membresías', 'Productos', 'Servicios', 'Otro'];
     const expenseCategories = ['Renta', 'Servicios', 'Equipo', 'Suministros', 'Otro'];
 
-    const { showSnackbar } = useSnackbar();
-
-    useEffect(() => {
-        fetchFinances();
-    }, []);
-
-    useEffect(() => {
-        fetchMonthlyCashbox();
-    }, [cashboxMonth]);
-
-    useEffect(() => {
-        fetchCashboxHistory();
-    }, []);
-
-    const fetchCashboxHistory = async () => {
+    const loadAllMovements = async () => {
+        setLoading(true);
         try {
-            setHistoryLoading(true);
-            const history = await FinanceService.getAllMonthlyCashboxes();
-            setCashboxHistory(history);
-        } catch (error) {
-            console.error('Error fetching cashbox history:', error);
-            showSnackbar('Error al cargar el historial de cajas', 'error');
-        } finally {
-            setHistoryLoading(false);
-        }
-    };
-
-    const fetchFinances = async () => {
-        try {
-            setLoading(true);
             const data = await FinanceService.getAll();
-            const sortedData = data.sort((a, b) => {
-                const dateA = getFinanceDate(a);
-                const dateB = getFinanceDate(b);
-                return dateB - dateA;
-            });
-            setFinances(sortedData);
+            setAllFinances(data || []);
         } catch (error) {
-            console.error('Error fetching finances:', error);
-            setFinances([]);
-            showSnackbar('Error al obtener los registros financieros', 'error');
+            console.error(error);
+            showSnackbar("Error al recuperar los movimientos", "error");
         } finally {
             setLoading(false);
         }
     };
 
-    const fetchMonthlyCashbox = async () => {
-        try {
-            setCashboxLoading(true);
-            const cashbox = await FinanceService.getMonthlyCashbox(cashboxMonth);
-            setSavedCashbox(cashbox);
+    useEffect(() => {
+        loadAllMovements();
+    }, []);
 
-            if (cashbox) {
-                setDebtAmount(cashbox.debts || 0);
-                setDistributionPercentages({
-                    first: cashbox.distributionPercentages?.first ?? 40,
-                    second: cashbox.distributionPercentages?.second ?? 40,
-                    third: cashbox.distributionPercentages?.third ?? 20,
-                });
-            } else {
-                setDebtAmount(120000);
-                setDistributionPercentages({ first: 40, second: 40, third: 20 });
-            }
-        } catch (error) {
-            console.error('Error fetching monthly cashbox:', error);
-            showSnackbar('Error al cargar la caja mensual', 'error');
-        } finally {
-            setCashboxLoading(false);
+    useEffect(() => {
+        const month = searchParams.get('month');
+        if (isMonthParam(month) && month !== selectedMonth) {
+            setSelectedMonth(month);
         }
+    }, [searchParams, selectedMonth]);
+
+    useEffect(() => {
+        const filtered = allFinances.filter(mov => {
+            return getMovementMonth(mov) === selectedMonth;
+        });
+
+        // Ordenar por fecha descendente
+        filtered.sort((a, b) => {
+            const dateA = getMovementDate(a) || new Date(0);
+            const dateB = getMovementDate(b) || new Date(0);
+            return dateB - dateA;
+        });
+
+        setFinances(filtered);
+
+        let incomes = 0;
+        let expenses = 0;
+        filtered.forEach(mov => {
+            const amount = Number(mov.amount || 0);
+            if (mov.type === 'income') incomes += amount;
+            else if (mov.type === 'expense') expenses += amount;
+        });
+
+        setTotalIncomes(incomes);
+        setTotalExpenses(expenses);
+        setNetBalance(incomes - expenses);
+    }, [allFinances, selectedMonth]);
+
+    const handleOpenCreate = () => {
+        const newMov = new FinanceModel();
+        newMov.date = dayjs(selectedMonth).isSame(dayjs(), 'month')
+            ? new Date()
+            : dayjs(selectedMonth).startOf('month').toDate();
+        setCurrentMovement(newMov);
+        setIsEditing(false);
+        setOpenModal(true);
     };
 
-    const handleOpen = () => setOpen(true);
+    const handleSelectedMonthChange = (month) => {
+        setSelectedMonth(month);
+        setSearchParams({ month }, { replace: true });
+    };
+
     const handleClose = () => {
-        setOpen(false);
-        setEditingId(null);
-        setFormData(new FinanceModel());
+        setOpenModal(false);
+        setCurrentMovement(new FinanceModel());
+        setIsEditing(false);
     };
 
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
-    };
-
-    const handleSubmit = async () => {
-        try {
-            if (editingId) {
-                await FinanceService.update(editingId, formData);
-            } else {
-                await FinanceService.add(formData);
-            }
-            fetchFinances();
-            handleClose();
-        } catch (error) {
-            console.error('Error saving finance:', error);
-            showSnackbar('Error al guardar el registro financiero', 'error');
+    const handleEdit = (movement) => {
+        let normalizedDate = movement.date;
+        if (movement.date?.seconds) {
+            normalizedDate = new Date(movement.date.seconds * 1000);
+        } else if (typeof movement.date === 'string') {
+            normalizedDate = new Date(movement.date);
         }
-    };
-
-    const handleEdit = (finance) => {
-        setFormData(finance);
-        setEditingId(finance.id);
-        handleOpen();
+        
+        setCurrentMovement({ 
+            ...movement,
+            date: normalizedDate
+        });
+        setIsEditing(true);
+        setOpenModal(true);
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('¿Está seguro de que desea eliminar este registro?')) {
+        if (window.confirm("¿Está seguro de eliminar este movimiento?")) {
             try {
                 await FinanceService.delete(id);
-                fetchFinances();
+                showSnackbar("Movimiento eliminado", "success");
+                loadAllMovements();
             } catch (error) {
-                console.error('Error deleting finance:', error);
-                showSnackbar('Error al eliminar el registro financiero', 'error');
+                showSnackbar("Error al eliminar", "error");
             }
         }
     };
 
-    const calculateTotals = () => {
-        const filteredData = finances;
-        const totalIncome = filteredData
-            .filter(f => f.type === 'income')
-            .reduce((sum, f) => sum + parseFloat(f.amount || 0), 0);
-        const totalExpense = filteredData
-            .filter(f => f.type === 'expense')
-            .reduce((sum, f) => sum + parseFloat(f.amount || 0), 0);
-        return { totalIncome, totalExpense, balance: totalIncome - totalExpense };
-    };
-
-    const getMonthlyFinances = () => {
-        const selectedMonth = dayjs(cashboxMonth);
-        return finances.filter((finance) => dayjs(getFinanceDate(finance)).isSame(selectedMonth, 'month'));
-    };
-
-    const calculateCashbox = () => {
-        const monthlyFinances = getMonthlyFinances();
-        const monthlyIncome = monthlyFinances
-            .filter(f => f.type === 'income')
-            .reduce((sum, f) => sum + parseFloat(f.amount || 0), 0);
-        const monthlyExpense = monthlyFinances
-            .filter(f => f.type === 'expense')
-            .reduce((sum, f) => sum + parseFloat(f.amount || 0), 0);
-        const totalBalance = monthlyIncome - monthlyExpense;
-        const debts = Math.max(parseFloat(debtAmount || 0), 0);
-        const balanceAfterDebts = totalBalance - debts;
-        const maintenanceFund = balanceAfterDebts > 0 ? balanceAfterDebts * 0.2 : 0;
-        const distributableBalance = balanceAfterDebts - maintenanceFund;
-        const safeDistributableBalance = distributableBalance > 0 ? distributableBalance : 0;
-
-        return {
-            monthlyFinances,
-            monthlyIncome,
-            monthlyExpense,
-            totalBalance,
-            debts,
-            balanceAfterDebts,
-            maintenanceFund,
-            distributableBalance: safeDistributableBalance,
-            distributions: {
-                first: safeDistributableBalance * (Number(distributionPercentages.first || 0) / 100),
-                second: safeDistributableBalance * (Number(distributionPercentages.second || 0) / 100),
-                third: safeDistributableBalance * (Number(distributionPercentages.third || 0) / 100),
-            },
-            distributionTotalPercentage:
-                Number(distributionPercentages.first || 0)
-                + Number(distributionPercentages.second || 0)
-                + Number(distributionPercentages.third || 0),
-        };
-    };
-
-
-    const downloadCashboxPDF = () => {
-        const cashbox = calculateCashbox();
-        const doc = new jsPDF();
-        const monthLabel = dayjs(cashboxMonth).format('MMMM YYYY');
-
-        doc.setFontSize(16);
-        doc.text('Reporte de Caja de Fin de Mes', 14, 15);
-
-        doc.setFontSize(10);
-        doc.text(`Periodo: ${monthLabel}`, 14, 25);
-        doc.text(`Generado: ${util.formatDate(new Date())}`, 14, 32);
-
-        autoTable(doc, {
-            startY: 40,
-            theme: 'grid',
-            head: [['Concepto', 'Monto']],
-            body: [
-                ['Ingresos del mes', formatCurrency(cashbox.monthlyIncome)],
-                ['Gastos del mes', formatCurrency(cashbox.monthlyExpense)],
-                ['Balance total', formatCurrency(cashbox.totalBalance)],
-                ['Deudas', formatCurrency(cashbox.debts)],
-                ['Balance después de deudas', formatCurrency(cashbox.balanceAfterDebts)],
-                ['Fondo de mantenimiento 20%', formatCurrency(cashbox.maintenanceFund)],
-                ['Balance distribuible', formatCurrency(cashbox.distributableBalance)],
-            ],
-            styles: { fontSize: 10 },
-            headStyles: { fillColor: [69, 90, 100] },
-        });
-
-        autoTable(doc, {
-            startY: doc.lastAutoTable.finalY + 8,
-            theme: 'grid',
-            head: [['Distribución', 'Porcentaje', 'Monto']],
-            body: [
-                ['Parte 1', `${distributionPercentages.first}%`, formatCurrency(cashbox.distributions.first)],
-                ['Parte 2', `${distributionPercentages.second}%`, formatCurrency(cashbox.distributions.second)],
-                ['Parte 3', `${distributionPercentages.third}%`, formatCurrency(cashbox.distributions.third)],
-            ],
-            styles: { fontSize: 10 },
-            headStyles: { fillColor: [69, 90, 100] },
-        });
-
-        autoTable(doc, {
-            startY: doc.lastAutoTable.finalY + 8,
-            theme: 'grid',
-            head: [['Fecha', 'Tipo', 'Categoría', 'Descripción', 'Monto']],
-            body: cashbox.monthlyFinances.map((finance) => [
-                util.formatDateShort(getFinanceDate(finance)),
-                finance.type === 'income' ? 'Ingreso' : 'Gasto',
-                finance.category,
-                finance.description,
-                `${finance.type === 'income' ? '+' : '-'}${formatCurrency(finance.amount)}`,
-            ]),
-            styles: { fontSize: 8 },
-            headStyles: { fillColor: [69, 90, 100] },
-        });
-
-        doc.save(`caja-fin-de-mes-${cashboxMonth}.pdf`);
-    };
-
-    const downloadCashboxHistoryPDF = () => {
-        const doc = new jsPDF();
-        const generatedAt = util.formatDate(new Date());
-
-        if (!cashboxHistory || cashboxHistory.length === 0) {
-            doc.text('No hay registros de historial disponibles.', 14, 20);
-            doc.save('historial-cajas.pdf');
+    const handleSave = async () => {
+        if (!currentMovement.description || !currentMovement.amount || !currentMovement.category) {
+            showSnackbar("Por favor rellene los campos obligatorios", "warning");
             return;
         }
-
-        cashboxHistory.forEach((cashbox, index) => {
-            const summary = cashbox.summary || {};
-            const distributions = summary.distributions || cashbox.distributions || {};
-            const monthLabel = formatMonth(cashbox.month || cashbox.id);
-
-            if (index > 0) doc.addPage();
-
-            doc.setFontSize(16);
-            doc.text(`Caja de Fin de Mes - ${monthLabel}`, 14, 20);
-            doc.setFontSize(10);
-            doc.text(`Generado: ${generatedAt}`, 14, 28);
-
-            autoTable(doc, {
-                startY: 36,
-                theme: 'grid',
-                head: [['Concepto', 'Monto']],
-                body: [
-                    ['Ingresos del mes', formatCurrency(summary.monthlyIncome ?? cashbox.monthlyIncome)],
-                    ['Gastos del mes', formatCurrency(summary.monthlyExpense ?? cashbox.monthlyExpense)],
-                    ['Balance total', formatCurrency(summary.totalBalance ?? cashbox.totalBalance)],
-                    ['Deudas', formatCurrency(summary.debts ?? cashbox.debts)],
-                    ['Balance después de deudas', formatCurrency(summary.balanceAfterDebts ?? cashbox.balanceAfterDebts)],
-                    ['Fondo de mantenimiento 20%', formatCurrency(summary.maintenanceFund ?? cashbox.maintenanceFund)],
-                    ['Balance distribuible', formatCurrency(summary.distributableBalance ?? cashbox.distributableBalance)],
-                ],
-                styles: { fontSize: 10 },
-                headStyles: { fillColor: [69, 90, 100] },
-            });
-
-            autoTable(doc, {
-                startY: doc.lastAutoTable.finalY + 8,
-                theme: 'grid',
-                head: [['Distribución', 'Porcentaje', 'Monto']],
-                body: [
-                    ['Parte 1', `${cashbox.distributionPercentages?.first ?? 0}%`, formatCurrency(distributions.first ?? 0)],
-                    ['Parte 2', `${cashbox.distributionPercentages?.second ?? 0}%`, formatCurrency(distributions.second ?? 0)],
-                    ['Parte 3', `${cashbox.distributionPercentages?.third ?? 0}%`, formatCurrency(distributions.third ?? 0)],
-                ],
-                styles: { fontSize: 10 },
-                headStyles: { fillColor: [69, 90, 100] },
-            });
-        });
-
-        doc.save('historial-cajas.pdf');
-    };
-
-    const saveCashbox = async () => {
         try {
-            setCashboxSaving(true);
-            const currentCashbox = calculateCashbox();
-            const generatedExpenseIds = { ...(savedCashbox?.generatedExpenseIds || {}) };
-            const cashboxExpenseDate = dayjs(cashboxMonth).endOf('month').toDate();
-
-            const debtExpense = new FinanceModel(
-                generatedExpenseIds.debts || '',
-                'expense',
-                currentCashbox.debts,
-                `Caja ${cashboxMonth} - Deudas`,
-                cashboxExpenseDate,
-                'Caja de fin de mes'
-            );
-
-            const distributableExpense = new FinanceModel(
-                generatedExpenseIds.distributable || '',
-                'expense',
-                currentCashbox.distributableBalance,
-                `Caja ${cashboxMonth} - Monto distribuible`,
-                cashboxExpenseDate,
-                'Caja de fin de mes'
-            );
-
-            if (currentCashbox.debts > 0) {
-                if (generatedExpenseIds.debts) {
-                    await FinanceService.update(generatedExpenseIds.debts, debtExpense);
-                } else {
-                    const createdDebtExpense = await FinanceService.add(debtExpense);
-                    generatedExpenseIds.debts = createdDebtExpense.id;
-                }
-            }
-
-            if (currentCashbox.distributableBalance > 0) {
-                if (generatedExpenseIds.distributable) {
-                    await FinanceService.update(generatedExpenseIds.distributable, distributableExpense);
-                } else {
-                    const createdDistributableExpense = await FinanceService.add(distributableExpense);
-                    generatedExpenseIds.distributable = createdDistributableExpense.id;
-                }
-            }
-
             const payload = {
-                month: cashboxMonth,
-                debts: currentCashbox.debts,
-                distributionPercentages: {
-                    first: Number(distributionPercentages.first || 0),
-                    second: Number(distributionPercentages.second || 0),
-                    third: Number(distributionPercentages.third || 0),
-                },
-                summary: {
-                    monthlyIncome: currentCashbox.monthlyIncome,
-                    monthlyExpense: currentCashbox.monthlyExpense,
-                    totalBalance: currentCashbox.totalBalance,
-                    balanceAfterDebts: currentCashbox.balanceAfterDebts,
-                    maintenanceFund: currentCashbox.maintenanceFund,
-                    distributableBalance: currentCashbox.distributableBalance,
-                    distributions: currentCashbox.distributions,
-                    distributionTotalPercentage: currentCashbox.distributionTotalPercentage,
-                },
-                movementIds: [
-                    ...currentCashbox.monthlyFinances.map((finance) => finance.id),
-                    ...Object.values(generatedExpenseIds),
-                ].filter(Boolean),
-                generatedExpenseIds,
-                closedAt: new Date(),
+                ...currentMovement,
+                amount: Number(currentMovement.amount),
+                date: currentMovement.date instanceof Date ? currentMovement.date : new Date(currentMovement.date)
             };
 
-            const saved = await FinanceService.saveMonthlyCashbox(cashboxMonth, payload);
-            setSavedCashbox(saved);
-            await fetchFinances();
-            await fetchCashboxHistory();
-            showSnackbar('Caja mensual guardada correctamente', 'success');
+            if (isEditing) {
+                await FinanceService.update(payload.id, payload);
+                showSnackbar("Movimiento actualizado", "success");
+            } else {
+                await FinanceService.add(payload);
+                showSnackbar("Movimiento registrado con éxito", "success");
+            }
+            handleClose();
+            loadAllMovements();
         } catch (error) {
-            console.error('Error saving monthly cashbox:', error);
-            showSnackbar('Error al guardar la caja mensual', 'error');
-        } finally {
-            setCashboxSaving(false);
+            showSnackbar("Error al guardar", "error");
         }
     };
 
-    const { totalIncome, totalExpense, balance } = calculateTotals();
-    const cashbox = calculateCashbox();
-
     return (
-        <div>
-            {menu}
-            <Container fixed className="finance-container">
-                <Typography variant="h4" gutterBottom className="finance-title">
-                    Finanzas
-                </Typography>
-
-                {/* Summary Cards */}
-                <Grid container spacing={2} className="summary-grid">
-                    <Grid item xs={12} sm={6} md={4}>
-                        <Card className="income-card">
-                            <CardContent className="card-content">
-                                <Typography className="card-title" gutterBottom>
-                                    Ingresos
-                                </Typography>
-                                <Typography variant="h5" className="card-amount">
-                                    ₡{totalIncome.toFixed(2)}
-                                </Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                        <Card className="expense-card">
-                            <CardContent className="card-content">
-                                <Typography className="card-title" gutterBottom>
-                                    Gastos
-                                </Typography>
-                                <Typography variant="h5" className="card-amount">
-                                    ₡{totalExpense.toFixed(2)}
-                                </Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                        <Card className={balance >= 0 ? 'balance-card-positive' : 'balance-card-negative'}>
-                            <CardContent className="card-content">
-                                <Typography className="card-title" gutterBottom>
-                                    Balance
-                                </Typography>
-                                <Typography variant="h5" className="card-amount">
-                                    ₡{balance.toFixed(2)}
-                                </Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                </Grid>
-
-                <Grid container spacing={2} sx={{ px: 2, mb: 4 }}>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleOpen}
-                        fullWidth
-                        className="add-button"
-                    >
-                        Agregar Movimiento
-                    </Button>
-                </Grid>
-
-                <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, mb: 4, borderRadius: 1 }}>
-                    <Stack
-                        direction={{ xs: 'column', md: 'row' }}
-                        spacing={2}
-                        justifyContent="space-between"
-                        alignItems={{ xs: 'stretch', md: 'center' }}
-                        sx={{ mb: 2 }}
-                    >
-                        <Grid container spacing={2} sx={{ mb: 2 }}>
-                        <Box>
-                            <Typography variant="h5" fontWeight={800}>
-                                Caja de fin de mes
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                Balance mensual, deudas, fondo de mantenimiento y distribución.
-                            </Typography>
-                        </Box>
-                        </Grid>
-                        <Button variant="outlined" onClick={saveCashbox} disabled={cashboxSaving}>
-                            Guardar Caja
-                        </Button>
-                        <Button variant="outlined" onClick={() => setHistoryOpen(true)}>
-                            Historial Caja
-                        </Button>
-                        <Button variant="outlined" onClick={downloadCashboxPDF}>
-                            PDF Caja
-                        </Button>
-                    </Stack>
-
-                    <Grid container spacing={2} sx={{ mb: 2 }}>
-                        <Grid item xs={12} md={3}>
-                            <TextField
-                                fullWidth
-                                label="Mes"
-                                type="month"
-                                value={cashboxMonth}
-                                onChange={(event) => setCashboxMonth(event.target.value)}
-                                InputLabelProps={{ shrink: true }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} md={3}>
-                            <TextField
-                                fullWidth
-                                label="Deudas"
-                                type="number"
-                                value={debtAmount}
-                                onChange={(event) => setDebtAmount(event.target.value)}
-                                inputProps={{ min: 0, step: '0.01' }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} md={2}>
-                            <TextField
-                                fullWidth
-                                label="Parte 1 %"
-                                type="number"
-                                value={distributionPercentages.first}
-                                onChange={(event) => setDistributionPercentages({
-                                    ...distributionPercentages,
-                                    first: event.target.value,
-                                })}
-                                inputProps={{ min: 0, step: '1' }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} md={2}>
-                            <TextField
-                                fullWidth
-                                label="Parte 2 %"
-                                type="number"
-                                value={distributionPercentages.second}
-                                onChange={(event) => setDistributionPercentages({
-                                    ...distributionPercentages,
-                                    second: event.target.value,
-                                })}
-                                inputProps={{ min: 0, step: '1' }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} md={2}>
-                            <TextField
-                                fullWidth
-                                label="Parte 3 %"
-                                type="number"
-                                value={distributionPercentages.third}
-                                onChange={(event) => setDistributionPercentages({
-                                    ...distributionPercentages,
-                                    third: event.target.value,
-                                })}
-                                inputProps={{ min: 0, step: '1' }}
-                            />
-                        </Grid>
-                    </Grid>
-
-                    {cashbox.distributionTotalPercentage !== 100 && (
-                        <MuiAlert severity="warning" sx={{ mb: 2 }}>
-                            Los porcentajes de distribución suman {cashbox.distributionTotalPercentage}%. Lo recomendado es 100%.
-                        </MuiAlert>
-                    )}
-
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6} md={3}>
-                            <Card variant="outlined">
-                                <CardContent>
-                                    <Typography variant="body2" color="text.secondary">Balance total</Typography>
-                                    <Typography variant="h6">{formatCurrency(cashbox.totalBalance)}</Typography>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
-                            <Card variant="outlined">
-                                <CardContent>
-                                    <Typography variant="body2" color="text.secondary">Después de deudas</Typography>
-                                    <Typography variant="h6">{formatCurrency(cashbox.balanceAfterDebts)}</Typography>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
-                            <Card variant="outlined">
-                                <CardContent>
-                                    <Typography variant="body2" color="text.secondary">Mantenimiento 20%</Typography>
-                                    <Typography variant="h6">{formatCurrency(cashbox.maintenanceFund)}</Typography>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={3}>
-                            <Card variant="outlined">
-                                <CardContent>
-                                    <Typography variant="body2" color="text.secondary">Distribuible</Typography>
-                                    <Typography variant="h6">{formatCurrency(cashbox.distributableBalance)}</Typography>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                    </Grid>
-
-                    <Divider sx={{ my: 2 }} />
-
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} md={4}>
-                            <Typography variant="body2" color="text.secondary">Parte 1 ({distributionPercentages.first}%)</Typography>
-                            <Typography variant="h6">{formatCurrency(cashbox.distributions.first)}</Typography>
-                        </Grid>
-                        <Grid item xs={12} md={4}>
-                            <Typography variant="body2" color="text.secondary">Parte 2 ({distributionPercentages.second}%)</Typography>
-                            <Typography variant="h6">{formatCurrency(cashbox.distributions.second)}</Typography>
-                        </Grid>
-                        <Grid item xs={12} md={4}>
-                            <Typography variant="body2" color="text.secondary">Parte 3 ({distributionPercentages.third}%)</Typography>
-                            <Typography variant="h6">{formatCurrency(cashbox.distributions.third)}</Typography>
-                        </Grid>
-                    </Grid>
-                </Paper>
-                {/* Date Filters *
-
-<Grid container spacing={2} sx={{ px: 2, mb: 4 }}>
-<Grid item xs={12} sm={6}>
-<LocalizationProvider
+        <div className="finance-container">
+            <Menu title="Control de Finanzas" />
+            <Container maxWidth="lg" sx={{ mt: 11, mb: 4 }}>
+                <Grid container spacing={3} sx={{ mb: 3 }} alignItems="center">
+                    <Grid item xs={12} sm={4}>
+                        <TextField
                             fullWidth
-                            adapterLocale="es-ES"
-                            dateAdapter={AdapterDayjs}>
-                            <DatePicker
-                                fullWidth
-                                format="LL"
-                                label="desde"
-                                maxDate={today}
-                                onChange={(date) => setEndDate(new Date(date))} />
-                        </LocalizationProvider>
-                        </Grid>
-                        <Grid item xs={12} sm={6} md={2}>
-                        <LocalizationProvider
-                        adapterLocale="es-ES"
-                        dateAdapter={AdapterDayjs}>
-                        <DatePicker
-                        format="LL"
-                        label="hasta"
-                        maxDate={today}
-                        onChange={(date) => setEndDate(new Date(date))} />
-                        </LocalizationProvider>
-                        </Grid>
-                        </Grid>
-                        */}
-                <CashboxHistory
-                    open={historyOpen}
-                    onClose={() => setHistoryOpen(false)}
-                    history={cashboxHistory}
-                    loading={historyLoading}
-                    onDownloadHistoryPDF={downloadCashboxHistoryPDF}
-                />
+                            label="Filtrar por Mes"
+                            type="month"
+                            value={selectedMonth}
+                            onChange={(e) => handleSelectedMonthChange(e.target.value)}
+                            InputLabelProps={{ shrink: true }}
+                        />
+                    </Grid>
+                    <Grid item xs={12} sm={8}>
+                        <Stack direction="row" spacing={2} justifyContent="flex-end">
+                            <Button 
+                                variant="outlined" 
+                                color="primary" 
+                                startIcon={<PointOfSaleIcon />}
+                                onClick={() => navigate(`/cashbox?month=${selectedMonth}`)}
+                            >
+                                Ir al Arqueo de Caja
+                            </Button>
+                            <Button variant="contained" color="primary" onClick={handleOpenCreate}>
+                                Agregar Movimiento
+                            </Button>
+                        </Stack>
+                    </Grid>
+                </Grid>
 
-                <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-                    <DialogTitle>
-                        {editingId ? 'Editar Movimiento' : 'Nuevo Movimiento'}
-                    </DialogTitle>
-                    <DialogContent className="dialog-content">
-                        <FormControl fullWidth className="form-field">
+                <Grid container spacing={3} sx={{ mb: 4 }}>
+                    <Grid item xs={12} md={4}>
+                        <Card><CardContent><Typography color="text.secondary" variant="body2">INGRESOS</Typography><Typography variant="h5" color="success.main" fontWeight={700}>₡{totalIncomes.toFixed(2)}</Typography></CardContent></Card>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                        <Card><CardContent><Typography color="text.secondary" variant="body2">GASTOS</Typography><Typography variant="h5" color="error.main" fontWeight={700}>₡{totalExpenses.toFixed(2)}</Typography></CardContent></Card>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                        <Card><CardContent><Typography color="text.secondary" variant="body2">BALANCE NETO</Typography><Typography variant="h5" fontWeight={700} color={netBalance >= 0 ? 'success.dark' : 'error.main'}>₡{netBalance.toFixed(2)}</Typography></CardContent></Card>
+                    </Grid>
+                </Grid>
+
+                {loading ? (
+                    <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 2 }} />
+                ) : (
+                    <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+                        <Table>
+                            <TableHead sx={{ bgcolor: 'action.hover' }}>
+                                <TableRow>
+                                    <TableCell><b>Movimiento</b></TableCell>
+                                    <TableCell align="right"><b>Monto</b></TableCell>
+                                    <TableCell align="center"><b>Acciones</b></TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {finances.length > 0 ? (
+                                    finances.map((mov) => {
+                                        const dateObj = getMovementDate(mov);
+                                        return (
+                                            <TableRow key={mov.id}>
+                                                <TableCell>
+                                                    <Stack spacing={0.5}>
+                                                        <Typography variant="body2" fontWeight={700}>
+                                                            {mov.description}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {util.formatDateShort(dateObj)} · {mov.category || 'General'}
+                                                        </Typography>
+                                                    </Stack>
+                                                </TableCell>
+                                                <TableCell align="right" style={{ color: mov.type === 'income' ? '#2e7d32' : '#d32f2f', fontWeight: 'bold' }}>
+                                                    ₡{Number(mov.amount).toFixed(2)}
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    <IconButton size="small" onClick={() => handleEdit(mov)}><EditIcon fontSize="small" /></IconButton>
+                                                    <IconButton size="small" onClick={() => handleDelete(mov.id)}><DeleteIcon fontSize="small" /></IconButton>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={3} align="center">No hay movimientos registrados en este periodo.</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                )}
+            </Container>
+
+            <Dialog open={openModal} onClose={handleClose} maxWidth="sm" fullWidth>
+                <DialogTitle>{isEditing ? 'Editar Movimiento' : 'Nuevo Movimiento'}</DialogTitle>
+                <DialogContent dividers>
+                    <Stack spacing={2} sx={{ mt: 1 }}>
+                        <FormControl fullWidth>
                             <InputLabel>Tipo</InputLabel>
                             <Select
                                 name="type"
-                                value={formData.type}
-                                onChange={handleInputChange}
+                                value={currentMovement.type || 'income'}
+                                onChange={(e) => setCurrentMovement({...currentMovement, type: e.target.value, category: ''})}
                                 label="Tipo"
                             >
                                 <MenuItem value="income">Ingreso</MenuItem>
@@ -728,125 +314,48 @@ function Finance({ menu }) {
                         <TextField
                             fullWidth
                             label="Monto"
-                            name="amount"
                             type="number"
-                            value={formData.amount}
-                            onChange={handleInputChange}
-                            className="form-field"
-                            inputProps={{ step: '0.01' }}
+                            value={currentMovement.amount || ''}
+                            onChange={(e) => setCurrentMovement({...currentMovement, amount: e.target.value})}
                         />
 
-                        <FormControl fullWidth className="form-field">
+                        <FormControl fullWidth>
                             <InputLabel>Categoría</InputLabel>
                             <Select
-                                name="category"
-                                value={formData.category}
-                                onChange={handleInputChange}
+                                value={currentMovement.category || ''}
+                                onChange={(e) => setCurrentMovement({...currentMovement, category: e.target.value})}
                                 label="Categoría"
                             >
-                                {(formData.type === 'income' ? incomeCategories : expenseCategories).map(
-                                    (cat) => (
-                                        <MenuItem key={cat} value={cat}>
-                                            {cat}
-                                        </MenuItem>
-                                    )
-                                )}
+                                {(currentMovement.type === 'income' ? incomeCategories : expenseCategories).map((cat) => (
+                                    <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+                                ))}
                             </Select>
                         </FormControl>
 
                         <TextField
                             fullWidth
                             label="Descripción"
-                            name="description"
-                            value={formData.description}
-                            onChange={handleInputChange}
+                            value={currentMovement.description || ''}
+                            onChange={(e) => setCurrentMovement({...currentMovement, description: e.target.value})}
                             multiline
-                            rows={3}
-                            className="form-field"
+                            rows={2}
                         />
 
                         <TextField
                             fullWidth
                             label="Fecha"
-                            name="date"
                             type="date"
-                            value={formData.date instanceof Date ? formData.date.toISOString().split('T')[0] : ''}
-                            onChange={(e) => setFormData({ ...formData, date: new Date(e.target.value) })}
+                            value={currentMovement.date instanceof Date ? currentMovement.date.toISOString().split('T')[0] : currentMovement.date ? new Date(currentMovement.date).toISOString().split('T')[0] : ''}
+                            onChange={(e) => setCurrentMovement({ ...currentMovement, date: new Date(e.target.value + 'T00:00:00') })}
                             InputLabelProps={{ shrink: true }}
-                            className="date-input"
                         />
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={handleClose}>Cancelar</Button>
-                        <Button onClick={handleSubmit} variant="contained">
-                            Guardar
-                        </Button>
-                    </DialogActions>
-                </Dialog>
-
-                {/* Table */}
-                {loading ? (
-                    <Stack spacing={1}>
-                        <Skeleton variant="rounded" height={40} className="loading-skeleton" />
-                        <Skeleton variant="rounded" height={40} className="loading-skeleton" />
-                        <Skeleton variant="rounded" height={40} className="loading-skeleton" />
                     </Stack>
-                ) : (
-                    <TableContainer component={Paper} sx={{ mt: 4 }}>
-                        <Table sx={{ minWidth: '100%' }} aria-label="simple table">
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>Fecha</TableCell>
-                                    <TableCell>Descripción</TableCell>
-                                    <TableCell align="right">Monto</TableCell>
-                                    <TableCell align="center">Acciones</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {getMonthlyFinances().length > 0 ? (
-                                    getMonthlyFinances().map((finance) => (
-                                        <TableRow key={finance.id}>
-                                            <TableCell>
-                                                {finance.date instanceof Date
-                                                    ? util.formatDateShort(finance.date)
-                                                    : util.formatDateShort(new Date(finance.date.seconds * 1000))}
-                                            </TableCell>
-                                            <TableCell>{finance.description}</TableCell>
-                                            <TableCell
-                                                align="right"
-                                                className={finance.type === 'income' ? 'income-row amount-cell' : 'expense-row amount-cell'}
-                                            >
-                                                {finance.type === 'income' ? '+' : '-'}₡
-                                                {parseFloat(finance.amount).toFixed(2)}
-                                            </TableCell>
-                                            <TableCell align="center" className="action-cell">
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleEdit(finance)}
-                                                >
-                                                    <EditIcon fontSize="small" />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => handleDelete(finance.id)}
-                                                >
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={6} align="center" className="no-data-cell">
-                                            No hay movimientos registrados para este mes
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                )}
-            </Container>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleClose}>Cancelar</Button>
+                    <Button onClick={handleSave} variant="contained" startIcon={<SaveIcon />}>Guardar</Button>
+                </DialogActions>
+            </Dialog>
         </div>
     );
 }

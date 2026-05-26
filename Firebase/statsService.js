@@ -1,7 +1,24 @@
-import { collection, deleteDoc, updateDoc, getDocs, doc, getDoc, addDoc, setDoc, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, deleteDoc, updateDoc, getDocs, doc, getDoc, setDoc, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from "./firebase"
 
 const COLLECTION_NAME = 'stats';
+
+const removeUndefinedFields = (value) => {
+    if (Array.isArray(value)) {
+        return value.map(removeUndefinedFields);
+    }
+
+    if (value && typeof value === 'object' && typeof value.toDate !== 'function' && !(value instanceof Date)) {
+        return Object.entries(value).reduce((acc, [key, entryValue]) => {
+            if (entryValue !== undefined) {
+                acc[key] = removeUndefinedFields(entryValue);
+            }
+            return acc;
+        }, {});
+    }
+
+    return value;
+};
 
 class StatService {
 
@@ -23,10 +40,12 @@ class StatService {
         try {
             const statsRef = collection(db, COLLECTION_NAME);
             const docRef = doc(statsRef);
-            stats['id'] = docRef.id;
-            await setDoc(docRef, stats);
+            const payload = removeUndefinedFields({ ...stats, id: docRef.id });
+            await setDoc(docRef, payload);
+            return payload;
         } catch (error) {
             console.error('Error trying to insert stats:', error);
+            throw error;
         }
     }
 
@@ -82,11 +101,17 @@ class StatService {
     //Update stats data by passing stats ID and new Data
     async update(id, newStats) {
         console.info('Updating stats:', newStats);
+        if (!id) {
+            throw new Error('Stats id is required to update stats');
+        }
         const statsRef = doc(db, COLLECTION_NAME, id);
         try {
-            await updateDoc(statsRef, newStats);
+            const payload = removeUndefinedFields({ ...newStats });
+            await updateDoc(statsRef, payload);
+            return { id, ...payload };
         } catch (error) {
             console.error('Error trying to update stats data:', error);
+            throw error;
         }
     }
 
@@ -98,15 +123,18 @@ class StatService {
         const statsQuery = await query(statsRef, where('uid', '==', uid), orderBy('date', 'desc'), limit(1));
         try {
             const querySnapshot = await getDocs(statsQuery);
-            if (querySnapshot.docs) {
-                const documentSnapshot = querySnapshot.docs[0];
-                const stats = {
-                    id: documentSnapshot.id,
-                    ...documentSnapshot.data()
-                };
-                return stats;
+            if (querySnapshot.empty) {
+                return null;
             }
+
+            const documentSnapshot = querySnapshot.docs[0];
+            const stats = {
+                id: documentSnapshot.id,
+                ...documentSnapshot.data()
+            };
+            return stats;
         } catch (error) {
+            console.error('Error fetching latest stats:', error);
             return null;
         }
     }
@@ -141,7 +169,5 @@ class StatService {
 
 
 export default StatService.getInstance();
-
-
 
 
