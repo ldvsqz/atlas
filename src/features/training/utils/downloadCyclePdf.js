@@ -4,8 +4,34 @@ import TrainingService from '../../../../Firebase/trainingService';
 import GymLayoutService from '../../../../Firebase/gymLayoutService';
 import { BLOCK_LABELS, CYCLE_LABELS, normalizeFirestoreDate } from '../models/trainingModels';
 import { buildCircuitDetailsMap } from '../public/circuitLayoutUtils';
+import { drawGymLayoutGrid, splitText } from '../../gymLayout/utils/downloadGymLayoutPdf';
 
-const formatNotes = (block) => block?.notes?.trim() || 'Sin notas';
+const NOTES_COLUMN_WIDTH = 78;
+const CIRCUIT_COLUMN_WIDTH = 76;
+const NOTES_CELL_PADDING = 3;
+const NOTES_TITLE_HEIGHT = 4;
+const NOTES_LINE_HEIGHT = 3.4;
+const NOTES_SECTION_GAP = 3;
+const CIRCUIT_CELL_HEIGHT = 84;
+
+const getCombinedNoteSections = (day, circuitDetails) => {
+  const notes = [];
+  const circuitNotes = circuitDetails?.layout?.listNotes?.trim();
+
+  if (day.shadowBlock?.notes?.trim()) {
+    notes.push({ title: BLOCK_LABELS.shadowBlock, text: day.shadowBlock.notes.trim() });
+  }
+
+  if (day.mainBlock?.notes?.trim()) {
+    notes.push({ title: BLOCK_LABELS.mainBlock, text: day.mainBlock.notes.trim() });
+  }
+
+  if (circuitNotes) {
+    notes.push({ title: 'Circuito', text: circuitNotes });
+  }
+
+  return notes;
+};
 
 const getLinkedLayoutIds = (days = []) => [...new Set(
   days
@@ -23,42 +49,6 @@ const loadCircuitDetails = async (days = []) => {
   ]);
 
   return buildCircuitDetailsMap({ layouts, exercises: gymExercises });
-};
-
-const formatCircuit = (block, circuitDetails) => {
-  const layoutName = block?.gymLayoutName?.trim();
-  const layout = circuitDetails?.layout;
-  const stations = circuitDetails?.stations || [];
-  const lines = [];
-
-  if (layoutName || layout?.name) {
-    lines.push(`Circuito: ${layoutName || layout.name}`);
-  }
-
-  if (stations.length) {
-    lines.push(`Estaciones:\n${stations.map((station, index) => `${index + 1}. ${station.name}`).join('\n')}`);
-  } else if (block?.gymLayoutId || layoutName) {
-    lines.push('Estaciones: no disponibles');
-  }
-
-  if (layout?.listNotes?.trim()) {
-    lines.push(`Notas del circuito:\n${layout.listNotes.trim()}`);
-  }
-
-  return lines.join('\n\n');
-};
-
-const formatMainBlock = (block, circuitDetails) => {
-  const lines = [];
-  const circuit = formatCircuit(block, circuitDetails);
-
-  if (circuit) {
-    lines.push(circuit);
-  }
-
-  lines.push(`Notas:\n${formatNotes(block)}`);
-
-  return lines.join('\n\n');
 };
 
 const countNotes = (days = []) =>
@@ -88,6 +78,114 @@ const sanitizeFileName = (value) =>
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'ciclo';
+
+const getNotesCellHeight = (doc, noteSections = [], width = NOTES_COLUMN_WIDTH) => {
+  if (!noteSections.length) return 0;
+
+  const maxWidth = width - NOTES_CELL_PADDING * 2;
+  const contentHeight = noteSections.reduce((height, section, index) => {
+    const lines = splitText(doc, section.text, maxWidth);
+    return height
+      + NOTES_TITLE_HEIGHT
+      + lines.length * NOTES_LINE_HEIGHT
+      + (index === noteSections.length - 1 ? 0 : NOTES_SECTION_GAP);
+  }, 0);
+
+  return Math.ceil(contentHeight + NOTES_CELL_PADDING * 2 + 2);
+};
+
+const buildWeekRows = (weekDays = [], circuitDetails = {}, doc) =>
+  weekDays.map((day) => {
+    const details = circuitDetails[day.mainBlock?.gymLayoutId];
+    const noteSections = getCombinedNoteSections(day, details);
+    const notesMinHeight = getNotesCellHeight(doc, noteSections);
+    const circuitName = day.mainBlock?.gymLayoutName || details?.layout?.name;
+    const circuitCell = details?.layout
+      ? {
+        content: '',
+        circuitGrid: { day, details },
+        styles: {
+          minCellHeight: CIRCUIT_CELL_HEIGHT,
+          cellPadding: 2,
+          fillColor: [255, 255, 255],
+        },
+      }
+      : (circuitName ? `Circuito: ${circuitName}\nGrid no disponible` : 'Sin circuito');
+
+    return [
+      `${day.name || `Día ${day.dayIndex}`}\nDía ${day.dayOfWeek || day.dayIndex}`,
+      {
+        content: noteSections.length ? '' : 'Sin notas',
+        noteSections,
+        styles: noteSections.length
+          ? {
+            minCellHeight: notesMinHeight,
+            cellPadding: NOTES_CELL_PADDING,
+          }
+          : {},
+      },
+      circuitCell,
+    ];
+  });
+
+const drawNotesCell = (doc, cell, noteSections = []) => {
+  if (!noteSections.length) return;
+
+  const padding = NOTES_CELL_PADDING;
+  const maxWidth = cell.width - padding * 2;
+  let y = cell.y + padding + 2;
+
+  noteSections.forEach((section, index) => {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(31, 41, 55);
+    doc.text(`${section.title}:`, cell.x + padding, y);
+    y += 4;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    const lines = splitText(doc, section.text, maxWidth);
+    doc.text(lines, cell.x + padding, y);
+    y += lines.length * NOTES_LINE_HEIGHT + (index === noteSections.length - 1 ? 0 : NOTES_SECTION_GAP);
+  });
+};
+
+const drawCircuitGridCell = (doc, cell, { day, details }) => {
+  const layout = details?.layout;
+  if (!layout) return;
+
+  const padding = 3;
+  const cols = layout.cols || 3;
+  const rows = layout.rows || 6;
+  const titleY = cell.y + padding + 3;
+  const titleHeight = 9;
+  const maxGridWidth = cell.width - padding * 2;
+  const maxGridHeight = cell.height - titleHeight - padding * 2;
+  const cellSize = Math.min(11, maxGridWidth / cols, maxGridHeight / rows);
+  const gridWidth = cellSize * cols;
+  const gridX = cell.x + (cell.width - gridWidth) / 2;
+  const gridY = cell.y + padding + titleHeight;
+  const circuitName = day.mainBlock?.gymLayoutName || layout.name || 'Circuito vinculado';
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(6.5);
+  doc.setTextColor(17, 24, 39);
+  doc.text(splitText(doc, circuitName, cell.width - padding * 2), cell.x + padding, titleY);
+
+  drawGymLayoutGrid({
+    doc,
+    layout,
+    exercises: details.exercises || details.stations || [],
+    x: gridX,
+    y: gridY,
+    cellSize,
+    fontSize: 4.5,
+    reservedFontSize: 4,
+    lineWidth: 0.15,
+    textPadding: 1,
+    textYOffset: 3.6,
+  });
+};
 
 export const downloadCyclePdf = async (cycle, exercises, providedDays = null, providedCircuitDetails = null) => {
   const doc = new jsPDF();
@@ -149,27 +247,37 @@ export const downloadCyclePdf = async (cycle, exercises, providedDays = null, pr
       autoTable(doc, {
         startY: tableStartY + 4,
         theme: 'grid',
-        head: [['Sesión', BLOCK_LABELS.shadowBlock, BLOCK_LABELS.mainBlock]],
-        body: weekDays.map((day) => [
-          `${day.name || `Día ${day.dayIndex}`}\nDía ${day.dayOfWeek || day.dayIndex}`,
-          formatNotes(day.shadowBlock),
-          formatMainBlock(day.mainBlock, circuitDetails[day.mainBlock?.gymLayoutId]),
-        ]),
-        styles: { fontSize: 8.5, cellPadding: 3, valign: 'top', textColor: [31, 41, 55], lineColor: [226, 232, 240] },
+        head: [['Sesión', 'Notas', 'Circuito']],
+        body: buildWeekRows(weekDays, circuitDetails, doc),
+        rowPageBreak: 'avoid',
+        pageBreak: 'auto',
+        styles: { fontSize: 8.5, cellPadding: 3, valign: 'top', textColor: [31, 41, 55], lineColor: [226, 232, 240], overflow: 'linebreak' },
         headStyles: { fillColor: [34, 197, 94], textColor: [255, 255, 255], fontSize: 8.5, fontStyle: 'bold' },
         alternateRowStyles: { fillColor: [248, 250, 252] },
         columnStyles: {
           0: { cellWidth: 30, fontStyle: 'bold' },
-          1: { cellWidth: 72 },
-          2: { cellWidth: 82 },
+          1: { cellWidth: NOTES_COLUMN_WIDTH },
+          2: { cellWidth: CIRCUIT_COLUMN_WIDTH, halign: 'center' },
+        },
+        didDrawCell: (data) => {
+          if (data.cell.raw?.noteSections) {
+            drawNotesCell(doc, data.cell, data.cell.raw.noteSections);
+          }
+
+          if (data.cell.raw?.circuitGrid) {
+            drawCircuitGridCell(doc, data.cell, data.cell.raw.circuitGrid);
+          }
         },
       });
 
       tableStartY = (doc.lastAutoTable?.finalY || tableStartY) + 10;
     });
+
+    nextY = tableStartY;
   } else {
     doc.setFontSize(11);
     doc.text('Este ciclo no tiene días editables todavía.', 14, nextY);
+    nextY += 10;
   }
 
   doc.save(`${sanitizeFileName(cycle.name)}.pdf`);
