@@ -14,7 +14,7 @@ const getSafeFileName = (value) =>
     .replace(/^-+|-+$/g, '')
     .toLowerCase();
 
-const splitText = (doc, text, maxWidth) => doc.splitTextToSize(String(text || ''), maxWidth);
+export const splitText = (doc, text, maxWidth) => doc.splitTextToSize(String(text || ''), maxWidth);
 
 const hexToRgb = (hex) => {
   const normalized = String(hex || '').replace('#', '');
@@ -27,7 +27,7 @@ const hexToRgb = (hex) => {
   ];
 };
 
-const softenColor = (hex) => {
+export const softenColor = (hex) => {
   const [red, green, blue] = hexToRgb(hex);
   const mix = 0.76;
   return [
@@ -35,6 +35,78 @@ const softenColor = (hex) => {
     Math.round(green * (1 - mix) + 255 * mix),
     Math.round(blue * (1 - mix) + 255 * mix),
   ];
+};
+
+export const drawGymLayoutGrid = ({
+  doc,
+  layout,
+  exercises = [],
+  x,
+  y,
+  cellSize,
+  fontSize = 9,
+  reservedFontSize = fontSize,
+  lineWidth = 0.8,
+  textPadding = 6,
+  textYOffset = 18,
+}) => {
+  const rows = layout?.rows || DEFAULT_GRID_ROWS;
+  const cols = layout?.cols || DEFAULT_GRID_COLS;
+  const gridWidth = cols * cellSize;
+  const gridHeight = rows * cellSize;
+  const reservedCells = getReservedCellsForGrid(rows, cols);
+  const exercisesById = new Map(exercises.map((exercise) => [String(exercise.id), exercise]));
+
+  doc.setDrawColor(190, 196, 207);
+  doc.setLineWidth(lineWidth);
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      doc.rect(x + col * cellSize, y + row * cellSize, cellSize, cellSize);
+    }
+  }
+
+  reservedCells.forEach((cell) => {
+    const cellX = x + cell.x * cellSize;
+    const cellY = y + cell.y * cellSize;
+    doc.setFillColor(229, 231, 235);
+    doc.rect(cellX, cellY, cellSize * cell.w, cellSize * cell.h, 'F');
+    doc.setDrawColor(120, 130, 145);
+    doc.rect(cellX, cellY, cellSize * cell.w, cellSize * cell.h);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(reservedFontSize);
+    doc.setTextColor(55, 65, 81);
+    doc.text(
+      splitText(doc, cell.label, cellSize * cell.w - textPadding * 2),
+      cellX + textPadding,
+      cellY + textYOffset
+    );
+  });
+
+  (layout?.items || []).forEach((item) => {
+    const exercise = exercisesById.get(String(item.exerciseId));
+    if (!exercise) return;
+
+    const itemX = x + item.x * cellSize;
+    const itemY = y + item.y * cellSize;
+    const width = item.w * cellSize;
+    const height = item.h * cellSize;
+    const color = softenColor(exercise.color);
+
+    doc.setFillColor(...color);
+    doc.setDrawColor(148, 163, 184);
+    doc.rect(itemX, itemY, width, height, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(fontSize);
+    doc.setTextColor(31, 41, 55);
+    doc.text(
+      splitText(doc, exercise.name, width - textPadding * 2),
+      itemX + textPadding,
+      itemY + textYOffset
+    );
+  });
+
+  return { width: gridWidth, height: gridHeight };
 };
 
 export const downloadGymLayoutPdf = ({ layout, exercises = [], orderedExercises = [] }) => {
@@ -48,8 +120,6 @@ export const downloadGymLayoutPdf = ({ layout, exercises = [], orderedExercises 
   const gridHeight = DEFAULT_GRID_ROWS * gridCell;
   const notesX = gridX + gridWidth + 28;
   const notesWidth = pageWidth - margin - notesX;
-  const reservedCells = getReservedCellsForGrid(DEFAULT_GRID_ROWS, DEFAULT_GRID_COLS);
-  const exercisesById = new Map(exercises.map((exercise) => [exercise.id, exercise]));
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
@@ -59,46 +129,7 @@ export const downloadGymLayoutPdf = ({ layout, exercises = [], orderedExercises 
   doc.setFontSize(10);
   doc.text(`Grid fijo ${DEFAULT_GRID_COLS} x ${DEFAULT_GRID_ROWS}`, margin, 66);
 
-  doc.setDrawColor(190, 196, 207);
-  doc.setLineWidth(0.8);
-
-  for (let row = 0; row < DEFAULT_GRID_ROWS; row += 1) {
-    for (let col = 0; col < DEFAULT_GRID_COLS; col += 1) {
-      doc.rect(gridX + col * gridCell, gridY + row * gridCell, gridCell, gridCell);
-    }
-  }
-
-  reservedCells.forEach((cell) => {
-    const x = gridX + cell.x * gridCell;
-    const y = gridY + cell.y * gridCell;
-    doc.setFillColor(229, 231, 235);
-    doc.rect(x, y, gridCell * cell.w, gridCell * cell.h, 'F');
-    doc.setDrawColor(120, 130, 145);
-    doc.rect(x, y, gridCell * cell.w, gridCell * cell.h);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(55, 65, 81);
-    doc.text(splitText(doc, cell.label, gridCell - 12), x + 6, y + 20);
-  });
-
-  layout.items.forEach((item) => {
-    const exercise = exercisesById.get(item.exerciseId);
-    if (!exercise) return;
-
-    const x = gridX + item.x * gridCell;
-    const y = gridY + item.y * gridCell;
-    const width = item.w * gridCell;
-    const height = item.h * gridCell;
-    const color = softenColor(exercise.color);
-
-    doc.setFillColor(...color);
-    doc.setDrawColor(148, 163, 184);
-    doc.rect(x, y, width, height, 'FD');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(31, 41, 55);
-    doc.text(splitText(doc, exercise.name, width - 12), x + 6, y + 18);
-  });
+  drawGymLayoutGrid({ doc, layout, exercises, x: gridX, y: gridY, cellSize: gridCell });
 
   doc.setTextColor(20, 20, 20);
   doc.setDrawColor(190, 196, 207);

@@ -19,5 +19,6 @@ export const buildCircuitDetailsMap = ({ layouts = [], exercises = [] }) =>
     [layout.id]: {
       layout,
       stations: getCircuitStations(layout, exercises),
+      exercises,
     },
   }), {});
