@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   Box,
   Button,
+  Chip,
   Divider,
   IconButton,
   InputBase,
@@ -31,8 +32,9 @@ const getLayoutStations = (layout, exercisesById) => {
 };
 
 function LayoutCatalogCard({ layout, stations, onOpen, onDelete }) {
-  const visibleStations = stations.slice(0, 8);
+  const visibleStations = stations.slice(0, 6);
   const remainingStations = Math.max(stations.length - visibleStations.length, 0);
+  const accentColor = visibleStations[0]?.color || '#2563EB';
 
   return (
     <Paper
@@ -49,7 +51,7 @@ function LayoutCatalogCard({ layout, stations, onOpen, onDelete }) {
       }}
       sx={{
         width: '100%',
-        minHeight: 184,
+        minHeight: 178,
         borderRadius: 2,
         p: 0,
         overflow: 'hidden',
@@ -57,49 +59,53 @@ function LayoutCatalogCard({ layout, stations, onOpen, onDelete }) {
         bgcolor: 'background.paper',
         cursor: 'pointer',
         position: 'relative',
+        borderColor: (theme) => alpha(theme.palette.divider, theme.palette.mode === 'dark' ? 0.72 : 0.9),
         transition: 'border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background-color 160ms ease',
         '&::before': {
           content: '""',
           position: 'absolute',
           left: 0,
           top: 0,
-          bottom: 0,
-          width: 4,
-          bgcolor: 'primary.main',
+          right: 0,
+          height: 4,
+          bgcolor: accentColor,
         },
         '&:hover': {
-          borderColor: 'primary.main',
-          boxShadow: '0 16px 36px rgba(15, 23, 42, 0.12)',
+          borderColor: accentColor,
+          boxShadow: (theme) => theme.palette.mode === 'dark'
+            ? '0 16px 34px rgba(0, 0, 0, 0.26)'
+            : `0 16px 34px ${alpha(accentColor, 0.14)}`,
           transform: 'translateY(-2px)',
         },
         '&:focus-visible': {
           outline: '2px solid',
-          outlineColor: 'primary.main',
+          outlineColor: accentColor,
           outlineOffset: 2,
         },
       }}
     >
       <Box
         sx={{
-          px: 1.75,
-          py: 1.5,
+          px: 1.5,
+          pt: 1.5,
+          pb: 1.25,
           borderBottom: '1px solid',
           borderColor: 'divider',
           bgcolor: (theme) => theme.palette.mode === 'dark'
-            ? alpha(theme.palette.primary.main, 0.16)
-            : alpha(theme.palette.primary.main, 0.07),
+            ? alpha(accentColor, 0.12)
+            : alpha(accentColor, 0.055),
         }}
       >
-        <Stack direction="row" spacing={1.25} alignItems="center">
+        <Stack direction="row" spacing={1} alignItems="flex-start">
           <Box
             sx={{
-              width: 34,
-              height: 34,
+              width: 32,
+              height: 32,
               borderRadius: 1,
               display: 'grid',
               placeItems: 'center',
               bgcolor: 'background.paper',
-              color: 'primary.main',
+              color: accentColor,
               flexShrink: 0,
               boxShadow: '0 6px 18px rgba(15, 23, 42, 0.08)',
             }}
@@ -107,81 +113,100 @@ function LayoutCatalogCard({ layout, stations, onOpen, onDelete }) {
             <MapIcon fontSize="small" />
           </Box>
           <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography variant="subtitle1" fontWeight={900} sx={{ overflowWrap: 'anywhere', lineHeight: 1.15 }}>
-              {layout.name || 'Circuito sin nombre'}
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
-            <IconButton
-              aria-label="Eliminar circuito"
-              size="small"
-              onClick={(event) => {
-                event.stopPropagation();
-                onDelete?.(layout);
-              }}
+            <Typography
+              variant="subtitle1"
+              fontWeight={900}
               sx={{
-                border: '1px solid',
-                borderColor: 'divider',
-                bgcolor: 'background.paper',
-                color: 'error.main',
-                '&:hover': {
-                  bgcolor: 'error.main',
-                  color: 'error.contrastText',
-                  borderColor: 'error.main',
-                },
+                lineHeight: 1.15,
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                overflowWrap: 'anywhere',
               }}
             >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-            <ArrowForwardIcon sx={{ color: 'text.secondary', fontSize: 18, alignSelf: 'center' }} />
-          </Stack>
-        </Stack>
-      </Box>
-
-      <Stack
-        component="ol"
-        spacing={0.75}
-        sx={{
-          m: 0,
-          px: 1.75,
-          py: 1.5,
-          listStyle: 'none',
-          counterReset: 'station',
-        }}
-      >
-        {visibleStations.length ? visibleStations.map((station) => (
-          <Box
-            key={station.id}
-            component="li"
+              {layout.name || 'Circuito sin nombre'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.35, lineHeight: 1 }}>
+              {stations.length} estación{stations.length === 1 ? '' : 'es'}
+            </Typography>
+          </Box>
+          <IconButton
+            aria-label="Eliminar circuito"
+            size="small"
+            onClick={(event) => {
+              event.stopPropagation();
+              onDelete?.(layout);
+            }}
             sx={{
-              counterIncrement: 'station',
-              display: 'grid',
-              gridTemplateColumns: '24px 1fr',
-              gap: 1,
-              alignItems: 'start',
-              color: 'text.secondary',
-              minWidth: 0,
-              '&::before': {
-                content: 'counter(station)',
-                width: 22,
-                height: 22,
-                borderRadius: '50%',
-                display: 'grid',
-                placeItems: 'center',
-                fontSize: 11,
-                fontWeight: 900,
-                color: 'primary.main',
-                bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.18 : 0.1),
+              width: 30,
+              height: 30,
+              borderRadius: 1,
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              color: 'error.main',
+              flexShrink: 0,
+              '&:hover': {
+                bgcolor: 'error.main',
+                color: 'error.contrastText',
+                borderColor: 'error.main',
               },
             }}
           >
-            <Typography variant="body2" sx={{ overflowWrap: 'anywhere', lineHeight: 1.35 }}>
-              {station.name}
-            </Typography>
-          </Box>
-        )) : (
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Stack>
+      </Box>
+
+      <Box
+        sx={{
+          px: 1.5,
+          py: 1.25,
+          minHeight: 88,
+        }}
+      >
+        {visibleStations.length ? (
+          <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+            {visibleStations.map((station, index) => (
+              <Chip
+                key={station.id}
+                size="small"
+                variant="outlined"
+                label={`${index + 1}. ${station.name}`}
+                sx={{
+                  maxWidth: '100%',
+                  height: 24,
+                  borderRadius: 1,
+                  justifyContent: 'flex-start',
+                  borderColor: alpha(station.color || accentColor, 0.42),
+                  bgcolor: (theme) => alpha(station.color || accentColor, theme.palette.mode === 'dark' ? 0.12 : 0.055),
+                  '& .MuiChip-label': {
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    fontWeight: 800,
+                    fontSize: 11.5,
+                  },
+                }}
+              />
+            ))}
+            {remainingStations > 0 && (
+              <Chip
+                size="small"
+                label={`+${remainingStations}`}
+                sx={{
+                  height: 24,
+                  borderRadius: 1,
+                  color: 'primary.main',
+                  bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.18 : 0.1),
+                  fontWeight: 900,
+                }}
+              />
+            )}
+          </Stack>
+        ) : (
           <Box
-            component="li"
             sx={{
               border: '1px dashed',
               borderColor: 'divider',
@@ -195,12 +220,30 @@ function LayoutCatalogCard({ layout, stations, onOpen, onDelete }) {
             </Typography>
           </Box>
         )}
-        {remainingStations > 0 && (
-          <Typography component="li" variant="body2" color="primary.main" fontWeight={900} sx={{ pl: 4 }}>
-            +{remainingStations} más
+      </Box>
+
+      <Box
+        sx={{
+          px: 1.5,
+          py: 1,
+          borderTop: '1px solid',
+          borderColor: 'divider',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          color: accentColor,
+          bgcolor: (theme) => theme.palette.mode === 'dark'
+            ? alpha(theme.palette.common.white, 0.018)
+            : alpha(theme.palette.common.black, 0.012),
+        }}
+      >
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          <Typography variant="caption" fontWeight={900}>
+            Abrir circuito
           </Typography>
-        )}
-      </Stack>
+          <ArrowForwardIcon sx={{ fontSize: 17 }} />
+        </Stack>
+      </Box>
     </Paper>
   );
 }
