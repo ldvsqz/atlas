@@ -16,10 +16,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 // Register service worker for production builds
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js').then(reg => {
-      // registration successful
-      console.log('Service worker registered.', reg);
-    }).catch(err => {
+    navigator.serviceWorker.register('/service-worker.js').catch(err => {
       console.warn('Service worker registration failed:', err);
     });
   });

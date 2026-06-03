@@ -1,6 +1,7 @@
 const admin = require('firebase-admin');
 const logger = require('firebase-functions/logger');
 const { defineSecret, defineString } = require('firebase-functions/params');
+const { HttpsError, onCall } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 
 admin.initializeApp();
@@ -66,7 +67,6 @@ exports.notifyMembershipStatus = onSchedule(
           stats.skippedWithoutPhone += 1;
           logger.info('Skipping member without phone.', {
             uid: user.uid,
-            name: user.name || null,
           });
           continue;
         }
@@ -76,7 +76,6 @@ exports.notifyMembershipStatus = onSchedule(
           stats.skippedWithoutUntil += 1;
           logger.warn('Skipping member without valid membership date.', {
             uid: user.uid,
-            name: user.name || null,
           });
           continue;
         }
@@ -133,7 +132,6 @@ exports.notifyMembershipStatus = onSchedule(
         stats.failed += 1;
         logger.error('Failed to process member notification.', {
           uid: user.uid,
-          name: user.name || null,
           error: serializeError(error),
         });
       }
@@ -144,12 +142,111 @@ exports.notifyMembershipStatus = onSchedule(
   },
 );
 
+exports.openWARequest = onCall(
+  {
+    region: 'us-central1',
+    timeoutSeconds: 60,
+    memory: '256MiB',
+    secrets: [OPENWA_API_KEY],
+  },
+  async (request) => {
+    await assertAdminRequest(request);
+
+    const data = request.data || {};
+    const action = data.action;
+
+    switch (action) {
+      case 'listSessions':
+        return openWARequest('/api/sessions', { method: 'GET' });
+      case 'createSession':
+        assertString(data.name, 'name');
+        return openWARequest('/api/sessions', {
+          method: 'POST',
+          body: { name: data.name },
+          retries: 0,
+        });
+      case 'startSession':
+        assertString(data.sessionId, 'sessionId');
+        return openWARequest(`/api/sessions/${encodeURIComponent(data.sessionId)}/start`, {
+          method: 'POST',
+          retries: 1,
+        });
+      case 'getSessionQr':
+        assertString(data.sessionId, 'sessionId');
+        return openWARequest(`/api/sessions/${encodeURIComponent(data.sessionId)}/qr`, {
+          method: 'GET',
+        });
+      case 'sendText':
+        assertString(data.sessionId, 'sessionId');
+        assertString(data.chatId, 'chatId');
+        assertString(data.text, 'text');
+        return sendTextMessage(data.sessionId, {
+          chatId: data.chatId,
+          text: data.text,
+        });
+      default:
+        throw new HttpsError('invalid-argument', 'Accion de OpenWA no soportada.');
+    }
+  },
+);
+
+exports.checkRegistrationAvailability = onCall(
+  {
+    region: 'us-central1',
+    timeoutSeconds: 30,
+    memory: '256MiB',
+  },
+  async (request) => {
+    const dni = normalizeLookupValue(request.data?.dni);
+    const email = normalizeLookupValue(request.data?.email).toLowerCase();
+
+    const [dniSnapshot, emailSnapshot] = await Promise.all([
+      dni
+        ? db.collection(USERS_COLLECTION).where('dni', '==', dni).limit(1).get()
+        : Promise.resolve({ empty: true }),
+      email
+        ? db.collection(USERS_COLLECTION).where('email', '==', email).limit(1).get()
+        : Promise.resolve({ empty: true }),
+    ]);
+
+    return {
+      dniExists: !dniSnapshot.empty,
+      emailExists: !emailSnapshot.empty,
+    };
+  },
+);
+
 async function sendTextMessage(sessionName, { chatId, text }) {
   return openWARequest(`/api/sessions/${encodeURIComponent(sessionName)}/messages/send-text`, {
     method: 'POST',
     body: { chatId, text },
     retries: 0,
   });
+}
+
+async function assertAdminRequest(request) {
+  const uid = request.auth?.uid;
+
+  if (!uid) {
+    throw new HttpsError('unauthenticated', 'Debes iniciar sesion para usar OpenWA.');
+  }
+
+  const userSnapshot = await db.collection(USERS_COLLECTION).doc(uid).get();
+  const user = userSnapshot.exists ? userSnapshot.data() : null;
+
+  if (user?.rol !== 0) {
+    throw new HttpsError('permission-denied', 'No tienes permisos para usar OpenWA.');
+  }
+}
+
+function assertString(value, fieldName) {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new HttpsError('invalid-argument', `El campo ${fieldName} es requerido.`);
+  }
+}
+
+function normalizeLookupValue(value) {
+  return typeof value === 'string' ? value.trim() : '';
 }
 
 async function openWARequest(path, { method = 'GET', body, retries = 2 } = {}) {

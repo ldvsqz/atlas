@@ -1,24 +1,25 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { Suspense, lazy, useState, useEffect, useMemo } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { colors } from '@mui/material';
+import { Box, CircularProgress, colors } from '@mui/material';
 import Menu from "./Components/Menu/Menu";
 import Login from "./Pages/Login/Login";
 import Register from "./Pages/Register/Register";
-import Events from "./Pages/Events";
-import Users from "./Pages/User/Users";
-import User from "./Pages/User/User";
-import Settings from "./Pages/Settings/Settings";
-import Exercises from "./Pages/Exercises/Exercises";
-import Aboutus from "./Pages/Aboutus/Aboutus";
 import ResetPassword from './Pages/ResetPassword/ResetPassword';
-import Finance from "./Pages/Finance/Finance";
-import TrainingPage from "./features/training/pages/TrainingPage";
-import PublicCycleView from "./features/training/public/PublicCycleView";
-import GymLayoutPage from "./features/gymLayout/pages/GymLayoutPage";
 import packageInfo from '../package.json';
-import CashboxPage from "./Pages/Finance/CashboxHistory";
+
+const Events = lazy(() => import("./Pages/Events"));
+const Users = lazy(() => import("./Pages/User/Users"));
+const User = lazy(() => import("./Pages/User/User"));
+const Settings = lazy(() => import("./Pages/Settings/Settings"));
+const Exercises = lazy(() => import("./Pages/Exercises/Exercises"));
+const Aboutus = lazy(() => import("./Pages/Aboutus/Aboutus"));
+const Finance = lazy(() => import("./Pages/Finance/Finance"));
+const TrainingPage = lazy(() => import("./features/training/pages/TrainingPage"));
+const PublicCycleView = lazy(() => import("./features/training/public/PublicCycleView"));
+const GymLayoutPage = lazy(() => import("./features/gymLayout/pages/GymLayoutPage"));
+const CashboxPage = lazy(() => import("./Pages/Finance/CashboxHistory"));
 
 
 function App() {
@@ -52,30 +53,40 @@ function App() {
       <CssBaseline />
       <Router>
         <RouteTracker>
-          <Routes>
-            <Route path="/" element={<Login />} />
-            <Route path="/reset" element={<ResetPassword />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/public/cycle/:id" element={<PublicCycleView />} />
-            <Route path="/cycle/:id" element={<PublicCycleView />} />
-            <Route path="/events" element={<Events menu={getMenu("Eventos")} />} />
-            <Route path="/users" element={<Users menu={getMenu("Personas")} />} />
-            <Route path="/finance" element={<Finance menu={getMenu("Finanzas")} />} />
-            <Route
-              path="/cashbox"
-              element={<CashboxPage menu={getMenu("Arqueo de caja")} />}
-            />
-            <Route path="/training" element={<TrainingPage menu={getMenu("Planificación")} />} />
-            <Route path="/gym-layout" element={<GymLayoutPage menu={getMenu("Circuitos del gimnasio")} />} />
-            <Route path="/settings" element={<Settings menu={getMenu("Configuración")} />} />
-            <Route path="/exercises" element={<Exercises menu={getMenu("Ejercicios")} />} />
-            <Route path="/aboutus" element={<Aboutus menu={getMenu("Sobre nosotros")} />} />
-            <Route path="/user/:uid" element={<User menu={getMenu("Atlas")} />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/" element={<Login />} />
+              <Route path="/reset" element={<ResetPassword />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/public/cycle/:id" element={<PublicCycleView />} />
+              <Route path="/cycle/:id" element={<PublicCycleView />} />
+              <Route path="/events" element={<Events menu={getMenu("Eventos")} />} />
+              <Route path="/users" element={<Users menu={getMenu("Personas")} />} />
+              <Route path="/finance" element={<Finance menu={getMenu("Finanzas")} />} />
+              <Route
+                path="/cashbox"
+                element={<CashboxPage menu={getMenu("Arqueo de caja")} />}
+              />
+              <Route path="/training" element={<TrainingPage menu={getMenu("Planificación")} />} />
+              <Route path="/gym-layout" element={<GymLayoutPage menu={getMenu("Circuitos del gimnasio")} />} />
+              <Route path="/settings" element={<Settings menu={getMenu("Configuración")} />} />
+              <Route path="/exercises" element={<Exercises menu={getMenu("Ejercicios")} />} />
+              <Route path="/aboutus" element={<Aboutus menu={getMenu("Sobre nosotros")} />} />
+              <Route path="/user/:uid" element={<User menu={getMenu("Atlas")} />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
         </RouteTracker>
       </Router>
     </ThemeProvider>
+  );
+}
+
+function PageLoader() {
+  return (
+    <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+      <CircularProgress />
+    </Box>
   );
 }
 

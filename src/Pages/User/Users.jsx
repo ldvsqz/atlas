@@ -136,7 +136,6 @@ function User({ menu }) {
   const handleWaNotificationResponse = (response, user) => {
     if (response) {
     userService.get(user.uid).then((_user) => {
-      console.log(_user);
         const message = util.selectMembershipMessage(_user.name, _user.until);
         if(_user.phone){
           util.openWAChat(_user.phone, message);
@@ -171,7 +170,6 @@ function User({ menu }) {
     const formattedName = util.formatMailNanme(newUser.name);
     const email = util.generateemail(formattedName);
     try {
-      console.log(newUser);
       const birthdayDate = newUser.birthday ? newUser.birthday.toDate() : Timestamp.now();
       const user = new UserModel(birthdayDate, formattedName, email, newUser.name, newUser.phone, email, Timestamp.now());
       await userService.add(user);

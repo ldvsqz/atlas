@@ -1,5 +1,3 @@
-import jsPDF from 'jspdf';
-import { autoTable } from 'jspdf-autotable';
 import TrainingService from '../../../../Firebase/trainingService';
 import GymLayoutService from '../../../../Firebase/gymLayoutService';
 import { BLOCK_LABELS, CYCLE_LABELS, normalizeFirestoreDate } from '../models/trainingModels';
@@ -188,6 +186,10 @@ const drawCircuitGridCell = (doc, cell, { day, details }) => {
 };
 
 export const downloadCyclePdf = async (cycle, exercises, providedDays = null, providedCircuitDetails = null) => {
+  const [{ default: jsPDF }, { autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ]);
   const doc = new jsPDF();
   const createdAt = normalizeFirestoreDate(cycle.createdAt);
 
