@@ -33,41 +33,22 @@ import jsPDF from 'jspdf';
 import { autoTable } from 'jspdf-autotable';
 import Util from '../../assets/Util';
 import FinanceModel from '../../models/FinanceModel';
+import {
+    CASHBOX_EXPENSE_CATEGORY,
+    formatPeriodLabel,
+    getCashboxDisplayPeriod,
+    getCashboxMonth,
+    getFinanceDate,
+    isCashboxGeneratedMovement,
+    isFinanceInPeriod,
+    isMonthParam,
+    resolveCashboxPeriod,
+    toDate,
+} from './financePeriodUtils';
 
 const util = new Util();
 const formatCurrency = (amount) => `₡${Number(amount || 0).toFixed(2)}`;
 const formatMonth = (month) => (month ? dayjs(month, 'YYYY-MM').format('MMMM YYYY') : '-');
-const isMonthParam = (value) => /^\d{4}-\d{2}$/.test(value || '');
-
-const getCashboxMonth = (cashbox) => (cashbox.month || cashbox.id || '').toString();
-
-const getCashboxMaintenanceFund = (cashbox) => {
-    const summary = cashbox.summary || {};
-    return Number(summary.maintenanceFund ?? cashbox.maintenanceFund ?? 0);
-};
-
-const getPreviousMonthMaintenance = (cashboxes, month) => {
-    const previousCashboxes = cashboxes.filter((cashbox) => {
-        const cashboxMonth = getCashboxMonth(cashbox);
-        return cashboxMonth && cashboxMonth < month;
-    }).sort((a, b) => getCashboxMonth(b).localeCompare(getCashboxMonth(a)));
-
-    return previousCashboxes.length ? getCashboxMaintenanceFund(previousCashboxes[0]) : 0;
-};
-
-const getFinanceDate = (finance) => {
-    if (!finance?.date) return null;
-    if (finance.date instanceof Date) return finance.date;
-    if (finance.date.toDate) return finance.date.toDate();
-    if (finance.date?.seconds) return new Date(finance.date.seconds * 1000);
-    const parsedDate = new Date(finance.date);
-    return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
-};
-
-const getFinanceMonth = (finance) => {
-    const date = getFinanceDate(finance);
-    return date ? dayjs(date).format('YYYY-MM') : '';
-};
 
 function CashboxHistoryDialog({ open, onClose, history, loading, onDownloadHistoryPDF }) {
     return (
@@ -88,14 +69,13 @@ function CashboxHistoryDialog({ open, onClose, history, loading, onDownloadHisto
                             <TableHead>
                                 <TableRow>
                                     <TableCell>Mes</TableCell>
-                                    <TableCell>Ingresos</TableCell>
-                                    <TableCell>Gastos</TableCell>
-                                    <TableCell>Balance total del mes</TableCell>
+                                    <TableCell>Periodo</TableCell>
+                                    <TableCell>Ingresos del periodo</TableCell>
+                                    <TableCell>Gastos del periodo</TableCell>
+                                    <TableCell>Balance total</TableCell>
                                     <TableCell>Deudas</TableCell>
                                     <TableCell>Distribuible</TableCell>
-                                    <TableCell>Mantenimiento mes anterior</TableCell>
                                     <TableCell>Mantenimiento</TableCell>
-                                    <TableCell>Fondo total de mantenimiento</TableCell>
                                     <TableCell>Cerrada</TableCell>
                                 </TableRow>
                             </TableHead>
@@ -103,23 +83,20 @@ function CashboxHistoryDialog({ open, onClose, history, loading, onDownloadHisto
                                 {history.map((cashbox) => {
                                     const summary = cashbox.summary || {};
                                     const month = getCashboxMonth(cashbox);
-                                    const previousMaintenance = getPreviousMonthMaintenance(history, month);
-                                    const closedAt = cashbox.closedAt
-                                        ? util.formatDate(new Date(cashbox.closedAt.seconds ? cashbox.closedAt.seconds * 1000 : cashbox.closedAt))
-                                        : '-';
+                                    const period = getCashboxDisplayPeriod(cashbox);
+                                    const closedAt = toDate(cashbox.closedAt);
 
                                     return (
                                         <TableRow key={cashbox.id}>
                                             <TableCell>{formatMonth(month)}</TableCell>
+                                            <TableCell>{formatPeriodLabel(period, util)}</TableCell>
                                             <TableCell>{formatCurrency(summary.monthlyIncome ?? cashbox.monthlyIncome)}</TableCell>
                                             <TableCell>{formatCurrency(summary.monthlyExpense ?? cashbox.monthlyExpense)}</TableCell>
                                             <TableCell>{formatCurrency(summary.totalBalance ?? cashbox.totalBalance)}</TableCell>
                                             <TableCell>{formatCurrency(summary.debts ?? cashbox.debts)}</TableCell>
                                             <TableCell>{formatCurrency(summary.distributableBalance ?? cashbox.distributableBalance)}</TableCell>
-                                            <TableCell>{formatCurrency(previousMaintenance)}</TableCell>
                                             <TableCell>{formatCurrency(summary.maintenanceFund ?? cashbox.maintenanceFund)}</TableCell>
-                                            <TableCell>{formatCurrency(previousMaintenance + getCashboxMaintenanceFund(cashbox))}</TableCell>
-                                            <TableCell>{closedAt}</TableCell>
+                                            <TableCell>{closedAt ? util.formatDate(closedAt) : '-'}</TableCell>
                                         </TableRow>
                                     );
                                 })}
@@ -228,8 +205,13 @@ function CashboxPage() {
         fetchMonthlyCashbox();
     }, [fetchMonthlyCashbox]);
 
-    const getMonthlyFinances = () => {
-        return finances.filter((finance) => getFinanceMonth(finance) === cashboxMonth);
+    const selectedPeriod = resolveCashboxPeriod(history, cashboxMonth, savedCashbox);
+
+    const getMonthlyFinances = (period = selectedPeriod) => {
+        return finances.filter((finance) => (
+            isFinanceInPeriod(finance, period)
+            && !isCashboxGeneratedMovement(finance, savedCashbox?.generatedExpenseIds)
+        ));
     };
 
     const handleCashboxMonthChange = (month) => {
@@ -237,12 +219,8 @@ function CashboxPage() {
         setSearchParams({ month }, { replace: true });
     };
 
-    const calculatePreviousMonthMaintenance = () => {
-        return getPreviousMonthMaintenance(history, cashboxMonth);
-    };
-
-    const calculateCashbox = () => {
-        const monthlyFinances = getMonthlyFinances();
+    const calculateCashbox = (period = selectedPeriod) => {
+        const monthlyFinances = getMonthlyFinances(period);
         const monthlyIncome = monthlyFinances
             .filter(f => f.type === 'income')
             .reduce((sum, f) => sum + parseFloat(f.amount || 0), 0);
@@ -253,21 +231,18 @@ function CashboxPage() {
         const debts = Math.max(parseFloat(debtAmount || 0), 0);
         const balanceAfterDebts = totalBalance - debts;
         const maintenanceFund = balanceAfterDebts > 0 ? balanceAfterDebts * 0.2 : 0;
-        const maintenancePreviousMonth = calculatePreviousMonthMaintenance();
-        const maintenanceFundTotal = maintenancePreviousMonth + maintenanceFund;
         const distributableBalance = balanceAfterDebts - maintenanceFund;
         const safeDistributableBalance = distributableBalance > 0 ? distributableBalance : 0;
 
         return {
+            period,
             monthlyFinances,
             monthlyIncome,
             monthlyExpense,
             totalBalance,
             debts,
             balanceAfterDebts,
-            maintenancePreviousMonth,
             maintenanceFund,
-            maintenanceFundTotal,
             distributableBalance: safeDistributableBalance,
             distributions: {
                 first: safeDistributableBalance * (Number(distributionPercentages.first || 0) / 100),
@@ -285,27 +260,27 @@ function CashboxPage() {
         const cashbox = calculateCashbox();
         const doc = new jsPDF();
         const monthLabel = dayjs(cashboxMonth).format('MMMM YYYY');
+        const periodLabel = formatPeriodLabel(cashbox.period, util);
 
         doc.setFontSize(16);
         doc.text('Reporte de Caja de Fin de Mes', 14, 15);
 
         doc.setFontSize(10);
-        doc.text(`Periodo: ${monthLabel}`, 14, 25);
-        doc.text(`Generado: ${util.formatDate(new Date())}`, 14, 32);
+        doc.text(`Caja: ${monthLabel}`, 14, 25);
+        doc.text(`Periodo: ${periodLabel}`, 14, 32);
+        doc.text(`Generado: ${util.formatDate(new Date())}`, 14, 39);
 
         autoTable(doc, {
-            startY: 40,
+            startY: 47,
             theme: 'grid',
             head: [['Concepto', 'Monto']],
             body: [
-                ['Ingresos del mes', formatCurrency(cashbox.monthlyIncome)],
-                ['Gastos del mes', formatCurrency(cashbox.monthlyExpense)],
+                ['Ingresos del periodo', formatCurrency(cashbox.monthlyIncome)],
+                ['Gastos del periodo', formatCurrency(cashbox.monthlyExpense)],
                 ['Balance total', formatCurrency(cashbox.totalBalance)],
                 ['Deudas', formatCurrency(cashbox.debts)],
                 ['Balance después de deudas', formatCurrency(cashbox.balanceAfterDebts)],
-                ['Ma - Mantenimiento mes anterior', formatCurrency(cashbox.maintenancePreviousMonth)],
                 ['M - Fondo de mantenimiento 20%', formatCurrency(cashbox.maintenanceFund)],
-                ['Ma + M - Fondo de mantenimiento', formatCurrency(cashbox.maintenanceFundTotal)],
                 ['Balance distribuible', formatCurrency(cashbox.distributableBalance)],
             ],
             styles: { fontSize: 10 },
@@ -358,28 +333,27 @@ function CashboxPage() {
             const distributions = summary.distributions || cashbox.distributions || {};
             const month = getCashboxMonth(cashbox);
             const monthLabel = formatMonth(month);
-            const previousMaintenance = getPreviousMonthMaintenance(history, month);
+            const period = getCashboxDisplayPeriod(cashbox);
 
             if (index > 0) doc.addPage();
 
             doc.setFontSize(16);
             doc.text(`Caja de Fin de Mes - ${monthLabel}`, 14, 20);
             doc.setFontSize(10);
-            doc.text(`Generado: ${generatedAt}`, 14, 28);
+            doc.text(`Periodo: ${formatPeriodLabel(period, util)}`, 14, 28);
+            doc.text(`Generado: ${generatedAt}`, 14, 35);
 
             autoTable(doc, {
-                startY: 36,
+                startY: 43,
                 theme: 'grid',
                 head: [['Concepto', 'Monto']],
                 body: [
-                    ['Ingresos del mes', formatCurrency(summary.monthlyIncome ?? cashbox.monthlyIncome)],
-                    ['Gastos del mes', formatCurrency(summary.monthlyExpense ?? cashbox.monthlyExpense)],
+                    ['Ingresos del periodo', formatCurrency(summary.monthlyIncome ?? cashbox.monthlyIncome)],
+                    ['Gastos del periodo', formatCurrency(summary.monthlyExpense ?? cashbox.monthlyExpense)],
                     ['Balance total', formatCurrency(summary.totalBalance ?? cashbox.totalBalance)],
                     ['Deudas', formatCurrency(summary.debts ?? cashbox.debts)],
                     ['Balance después de deudas', formatCurrency(summary.balanceAfterDebts ?? cashbox.balanceAfterDebts)],
-                    ['Ma - Mantenimiento mes anterior', formatCurrency(previousMaintenance)],
                     ['M - Fondo de mantenimiento 20%', formatCurrency(summary.maintenanceFund ?? cashbox.maintenanceFund)],
-                    ['Ma + M - Fondo de mantenimiento', formatCurrency(previousMaintenance + getCashboxMaintenanceFund(cashbox))],
                     ['Balance distribuible', formatCurrency(summary.distributableBalance ?? cashbox.distributableBalance)],
                 ],
                 styles: { fontSize: 10 },
@@ -406,9 +380,15 @@ function CashboxPage() {
     const saveCashbox = async () => {
         try {
             setCashboxSaving(true);
-            const currentCashbox = calculateCashbox();
+            const closedAt = new Date();
+            const closingPeriod = {
+                ...selectedPeriod,
+                end: closedAt,
+                isOpen: false,
+            };
+            const currentCashbox = calculateCashbox(closingPeriod);
             const generatedExpenseIds = { ...(savedCashbox?.generatedExpenseIds || {}) };
-            const cashboxExpenseDate = dayjs(cashboxMonth).endOf('month').toDate();
+            const cashboxExpenseDate = currentCashbox.period.end;
 
             const debtExpense = new FinanceModel(
                 generatedExpenseIds.debts || '',
@@ -416,7 +396,7 @@ function CashboxPage() {
                 currentCashbox.debts,
                 `Caja ${cashboxMonth} - Deudas`,
                 cashboxExpenseDate,
-                'Caja de fin de mes'
+                CASHBOX_EXPENSE_CATEGORY
             );
 
             const distributableExpense = new FinanceModel(
@@ -425,7 +405,7 @@ function CashboxPage() {
                 currentCashbox.distributableBalance,
                 `Caja ${cashboxMonth} - Monto distribuible`,
                 cashboxExpenseDate,
-                'Caja de fin de mes'
+                CASHBOX_EXPENSE_CATEGORY
             );
 
             if (currentCashbox.debts > 0) {
@@ -459,9 +439,7 @@ function CashboxPage() {
                     monthlyExpense: currentCashbox.monthlyExpense,
                     totalBalance: currentCashbox.totalBalance,
                     balanceAfterDebts: currentCashbox.balanceAfterDebts,
-                    maintenancePreviousMonth: currentCashbox.maintenancePreviousMonth,
                     maintenanceFund: currentCashbox.maintenanceFund,
-                    maintenanceFundTotal: currentCashbox.maintenanceFundTotal,
                     distributableBalance: currentCashbox.distributableBalance,
                     distributions: currentCashbox.distributions,
                     distributionTotalPercentage: currentCashbox.distributionTotalPercentage,
@@ -471,7 +449,9 @@ function CashboxPage() {
                     ...Object.values(generatedExpenseIds),
                 ].filter(Boolean),
                 generatedExpenseIds,
-                closedAt: new Date(),
+                periodStart: currentCashbox.period.start,
+                periodEnd: currentCashbox.period.end,
+                closedAt,
             };
 
             const saved = await FinanceService.saveMonthlyCashbox(cashboxMonth, payload);
@@ -527,7 +507,10 @@ function CashboxPage() {
                                         Caja de fin de mes
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        Balance mensual, deudas, fondo de mantenimiento y distribución.
+                                        Balance del periodo, deudas, fondo de mantenimiento y distribución.
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                        Periodo: {formatPeriodLabel(cashbox.period, util)}
                                     </Typography>
                                 </Box>
                                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
@@ -544,7 +527,7 @@ function CashboxPage() {
                                 <Grid item xs={12} md={3}>
                                     <TextField
                                         fullWidth
-                                        label="Mes"
+                                        label="Mes de caja"
                                         type="month"
                                         value={cashboxMonth}
                                         onChange={(event) => handleCashboxMonthChange(event.target.value)}
@@ -609,7 +592,7 @@ function CashboxPage() {
                             )}
 
                             <Grid container spacing={2}>
-                                <Grid item xs={12} sm={6} md={4}>
+                                <Grid item xs={12} sm={6} md={3}>
                                     <Card variant="outlined">
                                         <CardContent>
                                             <Typography variant="body2" color="text.secondary">Balance total</Typography>
@@ -617,7 +600,7 @@ function CashboxPage() {
                                         </CardContent>
                                     </Card>
                                 </Grid>
-                                <Grid item xs={12} sm={6} md={4}>
+                                <Grid item xs={12} sm={6} md={3}>
                                     <Card variant="outlined">
                                         <CardContent>
                                             <Typography variant="body2" color="text.secondary">Después de deudas</Typography>
@@ -625,7 +608,7 @@ function CashboxPage() {
                                         </CardContent>
                                     </Card>
                                 </Grid>
-                                <Grid item xs={12} sm={6} md={4}>
+                                <Grid item xs={12} sm={6} md={3}>
                                     <Card variant="outlined">
                                         <CardContent>
                                             <Typography variant="body2" color="text.secondary">Distribuible</Typography>
@@ -633,27 +616,11 @@ function CashboxPage() {
                                         </CardContent>
                                     </Card>
                                 </Grid>
-                                <Grid item xs={12} sm={6} md={4}>
-                                    <Card variant="outlined">
-                                        <CardContent>
-                                            <Typography variant="body2" color="text.secondary">Ma mes anterior</Typography>
-                                            <Typography variant="h6">{formatCurrency(cashbox.maintenancePreviousMonth)}</Typography>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                                <Grid item xs={12} sm={6} md={4}>
+                                <Grid item xs={12} sm={6} md={3}>
                                     <Card variant="outlined">
                                         <CardContent>
                                             <Typography variant="body2" color="text.secondary">Mantenimiento 20% (M)</Typography>
                                             <Typography variant="h6">{formatCurrency(cashbox.maintenanceFund)}</Typography>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                                <Grid item xs={12} sm={6} md={4}>
-                                    <Card variant="outlined">
-                                        <CardContent>
-                                            <Typography variant="body2" color="text.secondary">Ma + M</Typography>
-                                            <Typography variant="h6">{formatCurrency(cashbox.maintenanceFundTotal)}</Typography>
                                         </CardContent>
                                     </Card>
                                 </Grid>

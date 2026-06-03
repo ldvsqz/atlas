@@ -38,21 +38,17 @@ import './Finance.css';
 import dayjs from 'dayjs';
 import { useSnackbar } from '../../Components/snackbar/AtlasSnackbar';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import {
+    formatPeriodLabel,
+    getCashboxMonth,
+    getDefaultCashboxMonth,
+    getFinanceDate,
+    isFinanceInPeriod,
+    isMonthParam,
+    resolveCashboxPeriod,
+} from './financePeriodUtils';
 
-const isMonthParam = (value) => /^\d{4}-\d{2}$/.test(value || '');
-
-const getMovementDate = (movement) => {
-    if (!movement?.date) return null;
-    if (movement.date.toDate) return movement.date.toDate();
-    if (movement.date.seconds) return new Date(movement.date.seconds * 1000);
-    const parsedDate = new Date(movement.date);
-    return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
-};
-
-const getMovementMonth = (movement) => {
-    const date = getMovementDate(movement);
-    return date ? dayjs(date).format('YYYY-MM') : '';
-};
+const formatMonth = (month) => (month ? dayjs(month, 'YYYY-MM').format('MMMM YYYY') : '-');
 
 function Finance() {
     const navigate = useNavigate();
@@ -61,6 +57,7 @@ function Finance() {
     const util = new Util();
     const [loading, setLoading] = useState(true);
     const [allFinances, setAllFinances] = useState([]); 
+    const [cashboxHistory, setCashboxHistory] = useState([]);
     const [finances, setFinances] = useState([]);       
     const [selectedMonth, setSelectedMonth] = useState(isMonthParam(initialMonth) ? initialMonth : dayjs().format('YYYY-MM'));
     const [openModal, setOpenModal] = useState(false);
@@ -75,21 +72,34 @@ function Finance() {
     const incomeCategories = ['Membresías', 'Productos', 'Servicios', 'Otro'];
     const expenseCategories = ['Renta', 'Servicios', 'Equipo', 'Suministros', 'Otro'];
 
-    const loadAllMovements = async () => {
+    const selectedCashbox = cashboxHistory.find((cashbox) => (cashbox.month || cashbox.id) === selectedMonth);
+    const selectedPeriod = resolveCashboxPeriod(cashboxHistory, selectedMonth, selectedCashbox);
+    const activeCashboxMonth = getDefaultCashboxMonth(cashboxHistory);
+    const periodOptions = Array.from(new Set([
+        selectedMonth,
+        activeCashboxMonth,
+        ...cashboxHistory.map(getCashboxMonth),
+    ].filter(Boolean))).sort((a, b) => b.localeCompare(a));
+
+    const loadFinanceData = async () => {
         setLoading(true);
         try {
-            const data = await FinanceService.getAll();
-            setAllFinances(data || []);
+            const [financesData, cashboxesData] = await Promise.all([
+                FinanceService.getAll(),
+                FinanceService.getAllMonthlyCashboxes(),
+            ]);
+            setAllFinances(financesData || []);
+            setCashboxHistory(cashboxesData || []);
         } catch (error) {
             console.error(error);
-            showSnackbar("Error al recuperar los movimientos", "error");
+            showSnackbar("Error al recuperar los datos financieros", "error");
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        loadAllMovements();
+        loadFinanceData();
     }, []);
 
     useEffect(() => {
@@ -100,14 +110,20 @@ function Finance() {
     }, [searchParams, selectedMonth]);
 
     useEffect(() => {
-        const filtered = allFinances.filter(mov => {
-            return getMovementMonth(mov) === selectedMonth;
-        });
+        const month = searchParams.get('month');
+        if (!isMonthParam(month) && activeCashboxMonth !== selectedMonth) {
+            setSelectedMonth(activeCashboxMonth);
+        }
+    }, [activeCashboxMonth, searchParams, selectedMonth]);
+
+    useEffect(() => {
+        const period = resolveCashboxPeriod(cashboxHistory, selectedMonth, selectedCashbox);
+        const filtered = allFinances.filter(mov => isFinanceInPeriod(mov, period));
 
         // Ordenar por fecha descendente
         filtered.sort((a, b) => {
-            const dateA = getMovementDate(a) || new Date(0);
-            const dateB = getMovementDate(b) || new Date(0);
+            const dateA = getFinanceDate(a) || new Date(0);
+            const dateB = getFinanceDate(b) || new Date(0);
             return dateB - dateA;
         });
 
@@ -124,13 +140,13 @@ function Finance() {
         setTotalIncomes(incomes);
         setTotalExpenses(expenses);
         setNetBalance(incomes - expenses);
-    }, [allFinances, selectedMonth]);
+    }, [allFinances, cashboxHistory, selectedCashbox, selectedMonth]);
 
     const handleOpenCreate = () => {
         const newMov = new FinanceModel();
-        newMov.date = dayjs(selectedMonth).isSame(dayjs(), 'month')
+        newMov.date = selectedPeriod.isOpen && dayjs(selectedMonth).isSame(dayjs(), 'month')
             ? new Date()
-            : dayjs(selectedMonth).startOf('month').toDate();
+            : selectedPeriod.start;
         setCurrentMovement(newMov);
         setIsEditing(false);
         setOpenModal(true);
@@ -168,7 +184,7 @@ function Finance() {
             try {
                 await FinanceService.delete(id);
                 showSnackbar("Movimiento eliminado", "success");
-                loadAllMovements();
+                loadFinanceData();
             } catch (error) {
                 showSnackbar("Error al eliminar", "error");
             }
@@ -195,7 +211,7 @@ function Finance() {
                 showSnackbar("Movimiento registrado con éxito", "success");
             }
             handleClose();
-            loadAllMovements();
+            loadFinanceData();
         } catch (error) {
             showSnackbar("Error al guardar", "error");
         }
@@ -207,14 +223,29 @@ function Finance() {
             <Container maxWidth="lg" sx={{ mt: 11, mb: 4 }}>
                 <Grid container spacing={3} sx={{ mb: 3 }} alignItems="center">
                     <Grid item xs={12} sm={4}>
-                        <TextField
-                            fullWidth
-                            label="Filtrar por Mes"
-                            type="month"
-                            value={selectedMonth}
-                            onChange={(e) => handleSelectedMonthChange(e.target.value)}
-                            InputLabelProps={{ shrink: true }}
-                        />
+                        <FormControl fullWidth>
+                            <InputLabel>Periodo de caja</InputLabel>
+                            <Select
+                                value={selectedMonth}
+                                label="Periodo de caja"
+                                onChange={(e) => handleSelectedMonthChange(e.target.value)}
+                            >
+                                {periodOptions.map((month) => {
+                                    const cashbox = cashboxHistory.find((item) => getCashboxMonth(item) === month);
+                                    const period = resolveCashboxPeriod(cashboxHistory, month, cashbox);
+                                    const isActive = month === activeCashboxMonth;
+
+                                    return (
+                                        <MenuItem key={month} value={month}>
+                                            {formatMonth(month)} · {formatPeriodLabel(period, util)}{isActive ? ' · activo' : ''}
+                                        </MenuItem>
+                                    );
+                                })}
+                            </Select>
+                        </FormControl>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                            Periodo: {formatPeriodLabel(selectedPeriod, util)}
+                        </Typography>
                     </Grid>
                     <Grid item xs={12} sm={8}>
                         <Stack direction="row" spacing={2} justifyContent="flex-end">
@@ -235,13 +266,13 @@ function Finance() {
 
                 <Grid container spacing={3} sx={{ mb: 4 }}>
                     <Grid item xs={12} md={4}>
-                        <Card><CardContent><Typography color="text.secondary" variant="body2">INGRESOS</Typography><Typography variant="h5" color="success.main" fontWeight={700}>₡{totalIncomes.toFixed(2)}</Typography></CardContent></Card>
+                        <Card><CardContent><Typography color="text.secondary" variant="body2">INGRESOS DEL PERIODO</Typography><Typography variant="h5" color="success.main" fontWeight={700}>₡{totalIncomes.toFixed(2)}</Typography></CardContent></Card>
                     </Grid>
                     <Grid item xs={12} md={4}>
-                        <Card><CardContent><Typography color="text.secondary" variant="body2">GASTOS</Typography><Typography variant="h5" color="error.main" fontWeight={700}>₡{totalExpenses.toFixed(2)}</Typography></CardContent></Card>
+                        <Card><CardContent><Typography color="text.secondary" variant="body2">GASTOS DEL PERIODO</Typography><Typography variant="h5" color="error.main" fontWeight={700}>₡{totalExpenses.toFixed(2)}</Typography></CardContent></Card>
                     </Grid>
                     <Grid item xs={12} md={4}>
-                        <Card><CardContent><Typography color="text.secondary" variant="body2">BALANCE NETO</Typography><Typography variant="h5" fontWeight={700} color={netBalance >= 0 ? 'success.dark' : 'error.main'}>₡{netBalance.toFixed(2)}</Typography></CardContent></Card>
+                        <Card><CardContent><Typography color="text.secondary" variant="body2">BALANCE DEL PERIODO</Typography><Typography variant="h5" fontWeight={700} color={netBalance >= 0 ? 'success.dark' : 'error.main'}>₡{netBalance.toFixed(2)}</Typography></CardContent></Card>
                     </Grid>
                 </Grid>
 
@@ -260,7 +291,7 @@ function Finance() {
                             <TableBody>
                                 {finances.length > 0 ? (
                                     finances.map((mov) => {
-                                        const dateObj = getMovementDate(mov);
+                                        const dateObj = getFinanceDate(mov);
                                         return (
                                             <TableRow key={mov.id}>
                                                 <TableCell>
