@@ -101,7 +101,6 @@ function Login() {
             onClick={() => {
               setLoadingCircle(true);
               signInWithGoogle().then((user) => {
-                console.log("Google sign-in successful");
                 setLoadingCircle(false);
               })
                 .catch(() => {

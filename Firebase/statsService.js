@@ -36,7 +36,6 @@ class StatService {
 
     //add a stats to firebase
     async add(stats) {
-        console.info('Adding stats:', stats);
         try {
             const statsRef = collection(db, COLLECTION_NAME);
             const docRef = doc(statsRef);
@@ -91,7 +90,6 @@ class StatService {
         const statsRef = doc(db, COLLECTION_NAME, dni);
         try {
             await deleteDoc(statsRef);
-            console.log('stats deleted successfully');
         } catch (error) {
             console.error('Error trying to delete stats:', error);
         }
@@ -100,7 +98,6 @@ class StatService {
 
     //Update stats data by passing stats ID and new Data
     async update(id, newStats) {
-        console.info('Updating stats:', newStats);
         if (!id) {
             throw new Error('Stats id is required to update stats');
         }
@@ -169,5 +166,4 @@ class StatService {
 
 
 export default StatService.getInstance();
-
 

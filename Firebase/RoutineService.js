@@ -71,7 +71,6 @@ class RoutineService {
         const routineRef = doc(db, 'routine', dni);
         try {
             await deleteDoc(routineRef);
-            console.log('routine deleted successfully');
         } catch (error) {
             console.error('Error trying to delete routine:', error);
         }
@@ -83,7 +82,6 @@ class RoutineService {
         const routineRef = doc(db, 'routine', id);
         try {
             await updateDoc(routineRef, newroutine);
-            console.log('routine data updated successfully');
         } catch (error) {
             console.error('Error trying to update routine data:', error);
         }
@@ -137,7 +135,6 @@ class RoutineService {
 
 
 export default RoutineService.getInstance();
-
 
 
 

@@ -29,8 +29,6 @@ import FinanceService from '../../../Firebase/financeService';
 import { useSnackbar } from '../../Components/snackbar/AtlasSnackbar';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
-import jsPDF from 'jspdf';
-import { autoTable } from 'jspdf-autotable';
 import Util from '../../assets/Util';
 import FinanceModel from '../../models/FinanceModel';
 import {
@@ -256,7 +254,17 @@ function CashboxPage() {
         };
     };
 
-    const downloadCashboxPDF = () => {
+    const loadPdfTools = async () => {
+        const [{ default: jsPDF }, { autoTable }] = await Promise.all([
+            import('jspdf'),
+            import('jspdf-autotable'),
+        ]);
+
+        return { jsPDF, autoTable };
+    };
+
+    const downloadCashboxPDF = async () => {
+        const { jsPDF, autoTable } = await loadPdfTools();
         const cashbox = calculateCashbox();
         const doc = new jsPDF();
         const monthLabel = dayjs(cashboxMonth).format('MMMM YYYY');
@@ -318,7 +326,8 @@ function CashboxPage() {
         doc.save(`caja-fin-de-mes-${cashboxMonth}.pdf`);
     };
 
-    const downloadCashboxHistoryPDF = () => {
+    const downloadCashboxHistoryPDF = async () => {
+        const { jsPDF, autoTable } = await loadPdfTools();
         const doc = new jsPDF();
         const generatedAt = util.formatDate(new Date());
 

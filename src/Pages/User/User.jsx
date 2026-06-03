@@ -116,9 +116,7 @@ function User({ menu }) {
       const refreshedUser = { ...user };
       refreshedUser.until = newFirebaseUntil;
       setUser(refreshedUser);
-      UserService.update(user.uid, refreshedUser).then(() => {
-        console.log("Membresía renovada");
-      });
+      UserService.update(user.uid, refreshedUser);
     }
   }
   async function handleOnsetRoutine() {

@@ -1,5 +1,6 @@
 import { GoogleAuthProvider, signInWithPopup, getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, deleteUser } from "firebase/auth";
-import { app } from "./firebase"
+import { httpsCallable } from 'firebase/functions';
+import { app, functions } from "./firebase"
 import UserService from './userService';
 import UserModel from "../src/models/UserModel";
 import { Timestamp } from 'firebase/firestore';
@@ -13,6 +14,12 @@ const createAppError = (code, message) => {
     return error;
 };
 
+const checkRegistrationAvailability = async ({ dni = '', email = '' }) => {
+    const checkAvailability = httpsCallable(functions, 'checkRegistrationAvailability');
+    const response = await checkAvailability({ dni, email });
+    return response.data || {};
+};
+
 
 const signInWithGoogle = () => {
     return new Promise(async (resolve, reject) => {
@@ -20,12 +27,11 @@ const signInWithGoogle = () => {
             const res = await signInWithPopup(auth, googleProvider);
             const normalizedEmail = (res.user.email || '').trim().toLowerCase();
             const userExists = await UserService.existsByUid(res.user.uid);
-            const UserExistsByEmail = await UserService.existsByEMail(normalizedEmail);
-            console.log("User already exists", userExists, UserExistsByEmail);
+            const { emailExists } = await checkRegistrationAvailability({ email: normalizedEmail });
             if (userExists) {
                 const user = await UserService.get(res.user.uid);
                 resolve(user);
-            } else if (UserExistsByEmail) {
+            } else if (emailExists) {
                 reject(createAppError('app/email-already-exists', 'Ya existe un perfil registrado con este correo.'));
             } else {
                 const user = new UserModel(
@@ -41,7 +47,6 @@ const signInWithGoogle = () => {
                 resolve(user);
             }
         } catch (error) {
-            console.log(error);
             reject(error);
         }
     });
@@ -66,10 +71,10 @@ const registerWithEmailAndPassword = async (dni, birthday, phone, name, email, p
     const normalizedPhone = (phone || '').trim();
     const normalizedName = (name || '').trim();
 
-    const [dniExists, emailExists] = await Promise.all([
-        UserService.existsByDni(normalizedDni),
-        UserService.existsByEMail(normalizedEmail),
-    ]);
+    const { dniExists, emailExists } = await checkRegistrationAvailability({
+        dni: normalizedDni,
+        email: normalizedEmail,
+    });
 
     if (dniExists) {
         throw createAppError('app/dni-already-exists', 'Ya existe un perfil registrado con este DNI.');
@@ -97,7 +102,7 @@ const registerWithEmailAndPassword = async (dni, birthday, phone, name, email, p
         try {
             await deleteUser(res.user);
         } catch (deleteError) {
-            console.warn('Error deleting auth user after profile creation failed', deleteError);
+            console.warn('Error deleting auth user after profile creation failed');
         }
         throw createAppError('app/profile-create-failed', 'No se pudo crear el perfil del usuario.');
     }

@@ -6,28 +6,92 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function publicCycle(cycleId) {
-      return get(/databases/$(database)/documents/cycles/$(cycleId)).data.public == true;
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userDoc(request.auth.uid).data.rol == 0;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isPublicCycle(cycleId) {
+      return exists(/databases/$(database)/documents/cycles/$(cycleId))
+        && get(/databases/$(database)/documents/cycles/$(cycleId)).data.public == true;
+    }
+
+    match /users/{uid} {
+      allow read: if isAdmin() || isOwner(uid);
+      allow create: if isAdmin()
+        || (
+          isOwner(uid)
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.rol == 1
+        );
+      allow update: if isAdmin()
+        || (
+          isOwner(uid)
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.rol == resource.data.rol
+        );
+      allow delete: if isAdmin();
+    }
+
+    match /stats/{statsId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if isAdmin() || (signedIn() && request.resource.data.uid == request.auth.uid);
+      allow update, delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    match /routine/{routineId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    match /finances/{movementId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /monthlyCashboxes/{cashboxId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /gymExercises/{exerciseId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /gymLayouts/{layoutId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /cycles/{cycleId} {
       allow read: if signedIn() || resource.data.public == true;
-      allow write: if signedIn();
+      allow write: if isAdmin();
 
       match /days/{dayId} {
-        allow read: if signedIn() || publicCycle(cycleId);
-        allow write: if signedIn();
+        allow read: if signedIn() || isPublicCycle(cycleId);
+        allow write: if isAdmin();
       }
     }
 
     match /exercises/{exerciseId} {
-      allow read: if true;
-      allow write: if signedIn();
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /notificados/{notificationId} {
+      allow read, write: if isAdmin();
     }
 
     match /{document=**} {
-      allow read, write: if signedIn();
+      allow read, write: if false;
     }
   }
 }
-

@@ -1,5 +1,3 @@
-import jsPDF from 'jspdf';
-import { autoTable } from 'jspdf-autotable';
 import {
   DEFAULT_GRID_COLS,
   DEFAULT_GRID_ROWS,
@@ -109,7 +107,11 @@ export const drawGymLayoutGrid = ({
   return { width: gridWidth, height: gridHeight };
 };
 
-export const downloadGymLayoutPdf = ({ layout, exercises = [], orderedExercises = [] }) => {
+export const downloadGymLayoutPdf = async ({ layout, exercises = [], orderedExercises = [] }) => {
+  const [{ default: jsPDF }, { autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ]);
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 42;

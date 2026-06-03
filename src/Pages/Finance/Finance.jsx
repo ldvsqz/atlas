@@ -61,6 +61,8 @@ function Finance() {
     const [finances, setFinances] = useState([]);       
     const [selectedMonth, setSelectedMonth] = useState(isMonthParam(initialMonth) ? initialMonth : dayjs().format('YYYY-MM'));
     const [openModal, setOpenModal] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [movementToDelete, setMovementToDelete] = useState(null);
     const [currentMovement, setCurrentMovement] = useState(new FinanceModel());
     const [isEditing, setIsEditing] = useState(false);
     const { showSnackbar } = useSnackbar();
@@ -179,15 +181,29 @@ function Finance() {
         setOpenModal(true);
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm("¿Está seguro de eliminar este movimiento?")) {
-            try {
-                await FinanceService.delete(id);
-                showSnackbar("Movimiento eliminado", "success");
-                loadFinanceData();
-            } catch (error) {
-                showSnackbar("Error al eliminar", "error");
-            }
+    const handleDeleteRequest = (movement) => {
+        setMovementToDelete(movement);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteCancel = () => {
+        setDeleteDialogOpen(false);
+        setMovementToDelete(null);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!movementToDelete?.id) {
+            return;
+        }
+
+        try {
+            await FinanceService.delete(movementToDelete.id);
+            showSnackbar("Movimiento eliminado", "success");
+            loadFinanceData();
+        } catch (error) {
+            showSnackbar("Error al eliminar", "error");
+        } finally {
+            handleDeleteCancel();
         }
     };
 
@@ -309,7 +325,7 @@ function Finance() {
                                                 </TableCell>
                                                 <TableCell align="center">
                                                     <IconButton size="small" onClick={() => handleEdit(mov)}><EditIcon fontSize="small" /></IconButton>
-                                                    <IconButton size="small" onClick={() => handleDelete(mov.id)}><DeleteIcon fontSize="small" /></IconButton>
+                                                    <IconButton size="small" onClick={() => handleDeleteRequest(mov)}><DeleteIcon fontSize="small" /></IconButton>
                                                 </TableCell>
                                             </TableRow>
                                         );
@@ -385,6 +401,21 @@ function Finance() {
                 <DialogActions>
                     <Button onClick={handleClose}>Cancelar</Button>
                     <Button onClick={handleSave} variant="contained" startIcon={<SaveIcon />}>Guardar</Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel} maxWidth="xs" fullWidth>
+                <DialogTitle>Eliminar movimiento</DialogTitle>
+                <DialogContent dividers>
+                    <Typography variant="body2" color="text.secondary">
+                        ¿Deseas eliminar “{movementToDelete?.description || 'este movimiento'}” del periodo?
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleDeleteCancel}>Cancelar</Button>
+                    <Button onClick={handleDeleteConfirm} color="error" variant="contained" startIcon={<DeleteIcon />}>
+                        Eliminar
+                    </Button>
                 </DialogActions>
             </Dialog>
         </div>

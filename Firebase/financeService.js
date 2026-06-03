@@ -28,7 +28,6 @@ class FinanceService {
 
     //add a finance to firebase
     async add(finance) {
-        console.info('Adding finance:', finance);
         try {
             const financeRef = collection(db, COLLECTION_NAME);
             const docRef = doc(financeRef);
@@ -62,7 +61,6 @@ class FinanceService {
         const financeRef = doc(db, COLLECTION_NAME, id);
         try {
             await deleteDoc(financeRef);
-            console.log('finance deleted successfully');
         } catch (error) {
             console.error('Error trying to delete finance:', error);
         }
@@ -71,7 +69,6 @@ class FinanceService {
 
     //Update finance data by passing finance ID and new Data
     async update(id, newFinance) {
-        console.info('Updating finance:', id);
         const financeRef = doc(db, COLLECTION_NAME, id);
         try {
             const plainFinance = { ...newFinance };
