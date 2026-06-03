@@ -127,7 +127,6 @@ export const downloadGymLayoutPdf = ({ layout, exercises = [], orderedExercises 
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  doc.text(`Grid fijo ${DEFAULT_GRID_COLS} x ${DEFAULT_GRID_ROWS}`, margin, 66);
 
   drawGymLayoutGrid({ doc, layout, exercises, x: gridX, y: gridY, cellSize: gridCell });
 

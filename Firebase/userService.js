@@ -21,12 +21,8 @@ class UserService {
     async add(user) {
         const userRef = doc(db, COLLECTION_NAME, user.uid);
         const userData = { ...user }; // Convert UserModel object to plain JavaScript object
-        try {
-            await setDoc(userRef, userData);
-            return true;
-        } catch (error) {
-            console.log(error);
-        }
+        await setDoc(userRef, userData);
+        return true;
     }
 
 
@@ -49,24 +45,31 @@ class UserService {
     }
 
     async exists(dni) {
-        try {
-            const userRef = doc(db, COLLECTION_NAME, dni);
-            const documentSnapshot = await getDoc(userRef);
-            return documentSnapshot.exists();
-        } catch (error) {
-            return error;
-        }
+        return this.existsByDni(dni);
+    }
+
+    async existsByUid(uid) {
+        const userRef = doc(db, COLLECTION_NAME, uid);
+        const documentSnapshot = await getDoc(userRef);
+        return documentSnapshot.exists();
+    }
+
+    async existsByDni(dni) {
+        const usersRef = collection(db, COLLECTION_NAME);
+        const q = query(usersRef, where('dni', '==', dni), limit(1));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.size > 0;
     }
 
     async existsByEMail(email) {
         const usersRef = collection(db, COLLECTION_NAME);
         const q = query(usersRef, where('email', '==', email), limit(1));
         const querySnapshot = await getDocs(q);
-        if (querySnapshot.size > 0) {
-            return true;
-        } else {
-            return false;
-        }
+        return querySnapshot.size > 0;
+    }
+
+    async existsByEmail(email) {
+        return this.existsByEMail(email);
     }
 
 
@@ -117,15 +120,16 @@ class UserService {
 
 
     async getByEMail(email) {
-        const statsRef = collection(db, COLLECTION_NAME);
-        const querySnapshot = await query(statsRef, where('email', '==', email), limit(1));
-        if (querySnapshot.docs) {
+        const usersRef = collection(db, COLLECTION_NAME);
+        const q = query(usersRef, where('email', '==', email), limit(1));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
             const documentSnapshot = querySnapshot.docs[0];
-            const stats = {
+            const user = {
                 id: documentSnapshot.id,
                 ...documentSnapshot.data()
             };
-            return stats;
+            return user;
         } else {
             return null;
         }
@@ -134,7 +138,5 @@ class UserService {
 
 
 export default UserService.getInstance();
-
-
 
 

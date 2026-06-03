@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { auth, signInWithEmailAndPassword, signInWithGoogle } from "../../../Firebase/authFunctions";
-import { TextField, Button, Typography, Container, ListItemIcon, InputAdornment } from '@mui/material';
+import { TextField, Button, Typography, Container, ListItemIcon } from '@mui/material';
 import { useAuthState } from "react-firebase-hooks/auth";
 import UserService from '../../../Firebase/userService'
 import "./Login.css";
@@ -61,9 +61,9 @@ function Login() {
             Inicio de sesión
           </Typography>
           <TextField
-            label="Correo electrocnico"
+            label="Correo electrónico"
             type="email"
-            placeholder="Correo electrocnico"
+            placeholder="Correo electrónico"
             fullWidth
             margin="normal"
             value={email}

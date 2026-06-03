@@ -1,5 +1,5 @@
 import React from "react";
-import { Container, Typography, Box, Grid, Card, CardContent } from "@mui/material";
+import { Container, Typography, Box, Grid, Card, CardContent, Button, Stack } from "@mui/material";
 
 export default function AboutUs({ menu }) {
     return (
@@ -114,6 +114,36 @@ export default function AboutUs({ menu }) {
                         construir una comunidad fuerte.
                     </Typography>
                 </Box>
+
+                {/* Contact Section */}
+                <Card sx={{ maxWidth: 640, mx: "auto", mt: 6, p: 2 }}>
+                    <CardContent>
+                        <Typography variant="h5" fontWeight="bold" textAlign="center" gutterBottom>
+                            Contacto
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary" textAlign="center" mb={3}>
+                            Desarrollado por David Vasquez
+                        </Typography>
+                        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="center">
+                            <Button
+                                component="a"
+                                href="https://www.linkedin.com/in/davidvas24"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                variant="contained"
+                            >
+                                LinkedIn
+                            </Button>
+                            <Button
+                                component="a"
+                                href="mailto:ldvas24@gmail.com"
+                                variant="outlined"
+                            >
+                                ldvas24@gmail.com
+                            </Button>
+                        </Stack>
+                    </CardContent>
+                </Card>
             </Container>
         </div>
     );

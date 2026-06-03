@@ -194,6 +194,10 @@ function User({ menu }) {
     const normalizedValue = value.toString().trim().toLowerCase();
     return normalizedValue && normalizedValue !== 'ninguna';
   });
+  const hasStats = Boolean(stats?.date);
+  const isOwnProfile = currentUid === user.uid;
+  const canAddStats = currentRol == 0 || (isOwnProfile && !hasStats);
+  const canEditStats = currentRol == 0 && hasStats;
 
 
   return (
@@ -219,7 +223,7 @@ function User({ menu }) {
                         <Box sx={{ minWidth: 0 }}>
                           <Typography variant="h5" fontWeight={700} noWrap>{user.name || 'Usuario'}</Typography>
                           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                            {util.getAge(util.getDateFromFirebase(user.birthday))} años
+                            {util.getAge(util.getDateFromFirebase(user.birthday))} años · nac. {util.formatDateShort(util.getDateFromFirebase(user.birthday))}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             {currentUid === user.uid && currentRol == 0 ? 'Administrador' : `Activo hasta ${util.formatDateShort(util.getDateFromFirebase(user.until))}`}
@@ -317,7 +321,7 @@ function User({ menu }) {
                   <Card sx={{ borderRadius: 3, boxShadow: 2 }}>
                     <CardContent>
                       <Typography variant="h6" mb={2}>Medidas del {util.formatDate(util.getDateFromFirebase(stats.date)) || '—'}</Typography>
-                      {stats && stats.date ? (
+                      {hasStats ? (
                         <Grid container spacing={1}>
                           <Grid item xs={6}>
                             <Typography variant="subtitle2" color="text.secondary">Estatura</Typography>
@@ -342,12 +346,16 @@ function User({ menu }) {
                     </CardContent>
                     <CardActions sx={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, p: 2 }}>
                       <Grid container spacing={1}>
-                        <Grid item xs={6}>
-                          {currentRol == 0 && <SetStats stats={stats} uid={user.uid} isEditing={false} onSave={handleOnSaveStats} />}
-                        </Grid>
-                        <Grid item xs={6}>
-                          {currentRol == 0 && stats.date && <SetStats stats={stats} uid={user.uid} isEditing={true} onSave={handleOnSaveStats} />}
-                        </Grid>
+                        {canAddStats && (
+                          <Grid item xs={12} sm={canEditStats ? 6 : 12}>
+                            <SetStats stats={stats} uid={user.uid} isEditing={false} onSave={handleOnSaveStats} />
+                          </Grid>
+                        )}
+                        {canEditStats && (
+                          <Grid item xs={12} sm={6}>
+                            <SetStats stats={stats} uid={user.uid} isEditing={true} onSave={handleOnSaveStats} />
+                          </Grid>
+                        )}
                       </Grid>
                     </CardActions>
                   </Card>
@@ -358,7 +366,7 @@ function User({ menu }) {
                         <HealthAndSafetyIcon color={hasMedicalConsiderations ? 'warning' : 'success'} />
                         <Typography variant="h6">Consideraciones médicas</Typography>
                       </Stack>
-                      {stats && stats.date ? (
+                      {hasStats ? (
                         <Stack spacing={1.5}>
                           <MuiAlert severity={hasMedicalConsiderations ? 'warning' : 'success'} variant="outlined">
                             {hasMedicalConsiderations
