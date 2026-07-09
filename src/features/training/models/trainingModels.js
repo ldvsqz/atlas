@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import { normalizeMainCircuit } from '../utils/mainCircuitBuilder.js';
 
 export const CYCLE_TYPES = {
   MACRO: 'macro',
@@ -72,6 +73,7 @@ export const BLOCK_LABELS = {
 export const createEmptyBlock = () => ({
   notes: '',
   exerciseIds: [],
+  mainCircuit: null,
 });
 
 export const createDefaultCycleDays = (weeks = 1) =>
@@ -103,6 +105,8 @@ export const normalizeCycleDay = (day) => {
   const weekIndex = Number(day.weekIndex || Math.ceil(legacyDayIndex / 5) || 1);
   const dayOfWeek = Number(day.dayOfWeek || (((legacyDayIndex - 1) % 5) + 1) || 1);
 
+  const mainCircuit = normalizeMainCircuit(day.mainBlock?.mainCircuit || day.mainCircuit);
+
   return {
     ...day,
     weekIndex,
@@ -110,7 +114,7 @@ export const normalizeCycleDay = (day) => {
     dayIndex: legacyDayIndex,
     name: day.name || TRAINING_WEEK_DAYS[dayOfWeek - 1] || `Día ${dayOfWeek}`,
     mainBlock: createEmptyBlock(),
-    ...('mainBlock' in day ? { mainBlock: { ...createEmptyBlock(), ...day.mainBlock } } : {}),
+    ...('mainBlock' in day ? { mainBlock: { ...createEmptyBlock(), ...day.mainBlock, mainCircuit } } : {}),
     shadowBlock: createEmptyBlock(),
     ...('shadowBlock' in day ? { shadowBlock: { ...createEmptyBlock(), ...day.shadowBlock } } : {}),
     extraBlock: createEmptyBlock(),

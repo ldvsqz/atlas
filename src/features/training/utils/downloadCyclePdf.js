@@ -59,7 +59,7 @@ const countNotes = (days = []) =>
   );
 
 const countLinkedLayouts = (days = []) =>
-  days.filter((day) => day.mainBlock?.gymLayoutId || day.mainBlock?.gymLayoutName).length;
+  days.filter((day) => day.mainBlock?.gymLayoutId || day.mainBlock?.gymLayoutName || day.mainBlock?.mainCircuit).length;
 
 const groupDaysByWeek = (days) =>
   days.reduce((groups, day) => {
@@ -97,7 +97,7 @@ const buildWeekRows = (weekDays = [], circuitDetails = {}, doc) =>
     const details = circuitDetails[day.mainBlock?.gymLayoutId];
     const noteSections = getCombinedNoteSections(day, details);
     const notesMinHeight = getNotesCellHeight(doc, noteSections);
-    const circuitName = day.mainBlock?.gymLayoutName || details?.layout?.name;
+    const circuitName = day.mainBlock?.gymLayoutName || details?.layout?.name || (day.mainBlock?.mainCircuit ? 'Circuito generado' : '');
     const circuitCell = details?.layout
       ? {
         content: '',

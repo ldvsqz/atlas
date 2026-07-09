@@ -67,7 +67,7 @@ const CyclePrintLayout = forwardRef(function CyclePrintLayout({ cycle, days, sho
       + (day.shadowBlock?.notes?.trim() ? 1 : 0),
     0
   );
-  const linkedLayouts = days.filter((day) => day.mainBlock?.gymLayoutId || day.mainBlock?.gymLayoutName).length;
+  const linkedLayouts = days.filter((day) => day.mainBlock?.gymLayoutId || day.mainBlock?.gymLayoutName || day.mainBlock?.mainCircuit).length;
 
   return (
     <Box

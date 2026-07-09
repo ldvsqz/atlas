@@ -186,6 +186,7 @@ function DayEditor({ cycleId, weeks = 1 }) {
                           exerciseIds: draft.mainBlock?.exerciseIds || [],
                           gymLayoutId: draft.mainBlock?.gymLayoutId || '',
                           gymLayoutName: draft.mainBlock?.gymLayoutName || '',
+                          mainCircuit: draft.mainBlock?.mainCircuit || null,
                         },
                         extraBlock: {
                           notes: draft.extraBlock?.notes || '',

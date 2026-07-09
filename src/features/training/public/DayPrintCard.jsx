@@ -7,7 +7,7 @@ const BLOCKS = ['shadowBlock', 'mainBlock'];
 
 function TrainingBlock({ blockKey, block }) {
   const hasNotes = Boolean(block?.notes?.trim());
-  const hasLinkedLayout = blockKey === 'mainBlock' && Boolean(block?.gymLayoutId || block?.gymLayoutName);
+  const hasLinkedLayout = blockKey === 'mainBlock' && Boolean(block?.gymLayoutId || block?.gymLayoutName || block?.mainCircuit);
 
   return (
     <Box
@@ -26,7 +26,7 @@ function TrainingBlock({ blockKey, block }) {
         {hasLinkedLayout && (
           <Chip
             icon={<MapIcon />}
-            label={block.gymLayoutName || 'Circuito vinculado'}
+            label={block.gymLayoutName || (block.mainCircuit ? 'Circuito generado' : 'Circuito vinculado')}
             size="small"
             variant="outlined"
             sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }}
@@ -58,10 +58,21 @@ function TrainingBlock({ blockKey, block }) {
 
 function CircuitSummary({ block, circuitDetails }) {
   const layout = circuitDetails?.layout;
-  const stations = circuitDetails?.stations || [];
-  const circuitName = block?.gymLayoutName || layout?.name || 'Circuito vinculado';
+  const generatedStations = block?.mainCircuit?.stations || [];
+  const stations = circuitDetails?.stations?.length
+    ? circuitDetails.stations.map((station, index) => ({
+      id: station.id,
+      label: station.name,
+      category: generatedStations[index]?.category,
+    }))
+    : generatedStations.map((station) => ({
+      id: station.exerciseId,
+      label: `Estación ${station.order}`,
+      category: station.category,
+    }));
+  const circuitName = block?.gymLayoutName || layout?.name || (block?.mainCircuit ? 'Circuito generado' : 'Circuito vinculado');
 
-  if (!block?.gymLayoutId && !block?.gymLayoutName) return null;
+  if (!block?.gymLayoutId && !block?.gymLayoutName && !block?.mainCircuit) return null;
 
   return (
     <Box
@@ -92,7 +103,7 @@ function CircuitSummary({ block, circuitDetails }) {
         >
           {stations.map((station) => (
             <Typography component="li" variant="body2" key={station.id} sx={{ overflowWrap: 'anywhere' }}>
-              {station.name}
+              {station.category ? `${station.category}: ${station.label}` : station.label}
             </Typography>
           ))}
         </Stack>

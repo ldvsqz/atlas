@@ -1,15 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
-  Chip,
   CircularProgress,
   Divider,
   Stack,
   Tooltip,
   Typography,
 } from '@mui/material';
-import MapIcon from '@mui/icons-material/Map';
-import NotesIcon from '@mui/icons-material/Notes';
 import { CYCLE_LABELS, TRAINING_WEEK_DAYS, normalizeCycleDay } from '../models/trainingModels';
 import { useMicrocycleDays } from '../hooks/useMicrocycleDays';
 import SessionEditorDrawer from './SessionEditorDrawer';
@@ -98,7 +95,7 @@ const hasNotes = (block) => Boolean(block?.notes?.trim());
 
 const getSessionMeta = (day) => {
   const noteCount = [day.shadowBlock, day.mainBlock].filter(hasNotes).length;
-  const layoutName = day.mainBlock?.gymLayoutName || '';
+  const layoutName = day.mainBlock?.gymLayoutName || (day.mainBlock?.mainCircuit ? 'Circuito generado' : '');
 
   return {
     noteCount,
@@ -106,101 +103,6 @@ const getSessionMeta = (day) => {
     hasContent: noteCount > 0 || Boolean(layoutName),
   };
 };
-
-function SessionSummaryCard({ day, isSaving, onClick }) {
-  const dayLabel = day.name || TRAINING_WEEK_DAYS[(day.dayOfWeek || 1) - 1] || `Día ${day.dayIndex}`;
-  const sessionMeta = getSessionMeta(day);
-
-  return (
-    <Box
-      component="button"
-      type="button"
-      aria-label={`Editar sesión ${dayLabel}`}
-      disabled={isSaving}
-      onClick={onClick}
-      sx={{
-        width: '100%',
-        border: '1px solid',
-        borderColor: 'divider',
-        borderLeft: '6px solid',
-        borderLeftColor: (theme) => getTimelineColor(theme, 'session'),
-        borderRadius: 1,
-        bgcolor: 'background.paper',
-        cursor: isSaving ? 'progress' : 'pointer',
-        display: 'block',
-        p: 1.5,
-        textAlign: 'left',
-        transition: 'border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease',
-        '&:hover': {
-          borderColor: 'primary.main',
-          boxShadow: 2,
-          transform: 'translateY(-1px)',
-        },
-        '&:disabled': {
-          opacity: 0.65,
-        },
-      }}
-    >
-      <Stack spacing={1}>
-        <Stack direction="row" spacing={1} alignItems="flex-start" justifyContent="space-between">
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="body2" fontWeight={900} sx={{ overflowWrap: 'anywhere' }}>
-              {dayLabel}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Microciclo {day.weekIndex || 1} · Día {day.dayOfWeek || day.dayIndex}
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap" justifyContent="flex-end">
-            <Chip
-              size="small"
-              icon={<NotesIcon />}
-              label={`${sessionMeta.noteCount} nota${sessionMeta.noteCount === 1 ? '' : 's'}`}
-              variant="outlined"
-            />
-            {sessionMeta.layoutName && (
-              <Chip
-                size="small"
-                icon={<MapIcon />}
-                label={sessionMeta.layoutName}
-                variant="outlined"
-              />
-            )}
-          </Stack>
-        </Stack>
-
-        {sessionMeta.hasContent ? (
-          <Stack spacing={0.75}>
-            {hasNotes(day.shadowBlock) && (
-              <Box sx={{ bgcolor: 'action.hover', borderRadius: 1, p: 1 }}>
-                <Typography variant="caption" color="text.secondary" fontWeight={800}>
-                  Sombra
-                </Typography>
-                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-                  {day.shadowBlock.notes}
-                </Typography>
-              </Box>
-            )}
-            {hasNotes(day.mainBlock) && (
-              <Box sx={{ bgcolor: 'action.hover', borderRadius: 1, p: 1 }}>
-                <Typography variant="caption" color="text.secondary" fontWeight={800}>
-                  Bloque principal
-                </Typography>
-                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-                  {day.mainBlock.notes}
-                </Typography>
-              </Box>
-            )}
-          </Stack>
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            Sin notas ni circuito vinculado.
-          </Typography>
-        )}
-      </Stack>
-    </Box>
-  );
-}
 
 function PlanningTimeline({ cycle }) {
   const { days, loading, savingDayId, updateDay } = useMicrocycleDays(cycle.id, cycle.weeks);
@@ -477,6 +379,7 @@ function PlanningTimeline({ cycle }) {
           </Box>
         </Box>
       </Box>
+
       <SessionEditorDrawer
         open={Boolean(selectedDay)}
         day={selectedDay}

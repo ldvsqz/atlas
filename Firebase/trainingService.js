@@ -20,6 +20,7 @@ import {
   getCycleDayDocId,
   normalizeCycleDay,
 } from '../src/features/training/models/trainingModels';
+import { normalizeMainCircuit } from '../src/features/training/utils/mainCircuitBuilder.js';
 
 const CYCLES_COLLECTION = 'cycles';
 const EXERCISES_COLLECTION = 'exercises';
@@ -224,6 +225,7 @@ class TrainingService {
         exerciseIds: dayData.mainBlock?.exerciseIds || [],
         gymLayoutId: dayData.mainBlock?.gymLayoutId || '',
         gymLayoutName: dayData.mainBlock?.gymLayoutName || '',
+        mainCircuit: normalizeMainCircuit(dayData.mainBlock?.mainCircuit || dayData.mainCircuit),
       },
       extraBlock: {
         notes: dayData.extraBlock?.notes || '',
