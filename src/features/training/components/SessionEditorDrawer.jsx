@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   Button,
@@ -16,8 +16,13 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import SaveIcon from '@mui/icons-material/Save';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import MapIcon from '@mui/icons-material/Map';
 import { BLOCK_LABELS, createEmptyBlock, normalizeCycleDay } from '../models/trainingModels';
 import { useGymLayout } from '../../gymLayout/hooks/useGymLayout';
+import { useGymExercises } from '../../gymLayout/hooks/useGymExercises';
+import { buildMainCircuit, MAIN_CIRCUIT_STATION_COUNT } from '../utils/mainCircuitBuilder.js';
+import { useSnackbar } from '../../../Components/snackbar/AtlasSnackbar';
 
 const normalizeEditableDay = (day) => {
   if (!day) return null;
@@ -43,14 +48,23 @@ const normalizeEditableDay = (day) => {
 function SessionEditorDrawer({
   open,
   day,
+  focusGenerator = false,
   saving = false,
   onClose,
   onSave,
 }) {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const generatorRef = useRef(null);
   const [draft, setDraft] = useState(() => normalizeEditableDay(day));
+  const [stationCategories, setStationCategories] = useState([]);
   const { layout, layouts, loading: layoutsLoading } = useGymLayout();
+  const { exercises: gymExercises, loading: gymExercisesLoading } = useGymExercises();
+  const { showSnackbar } = useSnackbar();
+  const gymExerciseCategories = useMemo(
+    () => [...new Set(gymExercises.map((exercise) => exercise.category).filter(Boolean))].sort(),
+    [gymExercises]
+  );
   const layoutOptions = useMemo(() => {
     const options = [...layouts];
 
@@ -74,6 +88,29 @@ function SessionEditorDrawer({
       setDraft(normalizeEditableDay(day));
     }
   }, [day, open]);
+
+  useEffect(() => {
+    if (!open || !focusGenerator) return;
+
+    window.setTimeout(() => {
+      generatorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  }, [focusGenerator, open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const currentCategories = day?.mainBlock?.mainCircuit?.stations?.map((station) => station.category).filter(Boolean) || [];
+    const fallbackCategories = Array.from({ length: MAIN_CIRCUIT_STATION_COUNT }, (_, index) =>
+      gymExerciseCategories[index % Math.max(gymExerciseCategories.length, 1)] || ''
+    );
+
+    setStationCategories(
+      Array.from({ length: MAIN_CIRCUIT_STATION_COUNT }, (_, index) =>
+        currentCategories[index] || fallbackCategories[index] || ''
+      )
+    );
+  }, [day, gymExerciseCategories, open]);
 
   const updateBlock = (blockKey, blockValue) => {
     setDraft((current) => ({
@@ -102,6 +139,7 @@ function SessionEditorDrawer({
         exerciseIds: draft.mainBlock?.exerciseIds || [],
         gymLayoutId: draft.mainBlock?.gymLayoutId || '',
         gymLayoutName: draft.mainBlock?.gymLayoutName || '',
+        mainCircuit: draft.mainBlock?.mainCircuit || null,
       },
       extraBlock: {
         notes: draft.extraBlock?.notes || '',
@@ -109,6 +147,38 @@ function SessionEditorDrawer({
       },
     });
   };
+
+  const updateStationCategory = (index, category) => {
+    setStationCategories((current) => {
+      const nextCategories = [...current];
+      nextCategories[index] = category;
+      return nextCategories;
+    });
+  };
+
+  const handleGenerateCircuit = () => {
+    if (!draft) return;
+
+    try {
+      const mainCircuit = buildMainCircuit({
+        stationCategories,
+        exercises: gymExercises,
+      });
+
+      updateBlock('mainBlock', {
+        ...draft.mainBlock,
+        mainCircuit,
+        gymLayoutId: '',
+        gymLayoutName: 'Circuito generado',
+      });
+      showSnackbar('Circuito principal generado. Guarda la sesión para conservarlo.', 'success');
+    } catch (error) {
+      console.error('Error generating main circuit:', error);
+      showSnackbar(error.message || 'No se pudo generar el circuito principal', 'error');
+    }
+  };
+
+  const generatedStationCount = draft?.mainBlock?.mainCircuit?.stations?.length || 0;
 
   return (
     <Drawer
@@ -214,6 +284,76 @@ function SessionEditorDrawer({
                   {BLOCK_LABELS.mainBlock}
                 </Typography>
                 <Stack spacing={1.5} sx={{ mt: 1 }}>
+                  <Box
+                    ref={generatorRef}
+                    sx={{
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      bgcolor: 'background.default',
+                      p: { xs: 1.25, sm: 1.5 },
+                    }}
+                  >
+                    <Stack spacing={1.25}>
+                      <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                          <MapIcon fontSize="small" color="primary" />
+                          <Typography variant="subtitle2" fontWeight={900}>
+                            Circuito principal
+                          </Typography>
+                        </Stack>
+                        {generatedStationCount > 0 && (
+                          <Typography variant="caption" color="text.secondary">
+                            {generatedStationCount} estaciones
+                          </Typography>
+                        )}
+                      </Stack>
+
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                          gap: 1,
+                        }}
+                      >
+                        {Array.from({ length: MAIN_CIRCUIT_STATION_COUNT }, (_, index) => (
+                          <TextField
+                            key={`station-category-${index + 1}`}
+                            select
+                            size="small"
+                            label={`Estación ${index + 1}`}
+                            value={stationCategories[index] || ''}
+                            onChange={(event) => updateStationCategory(index, event.target.value)}
+                            disabled={saving || gymExercisesLoading}
+                            fullWidth
+                          >
+                            {gymExerciseCategories.map((category) => (
+                              <MenuItem key={category} value={category}>
+                                {category}
+                              </MenuItem>
+                            ))}
+                          </TextField>
+                        ))}
+                      </Box>
+
+                      <Button
+                        type="button"
+                        variant="outlined"
+                        startIcon={gymExercisesLoading ? <CircularProgress size={16} color="inherit" /> : <AutoAwesomeIcon />}
+                        onClick={handleGenerateCircuit}
+                        disabled={
+                          saving
+                          || gymExercisesLoading
+                          || stationCategories.length !== MAIN_CIRCUIT_STATION_COUNT
+                          || stationCategories.some((category) => !category)
+                        }
+                        fullWidth
+                      >
+                        Generar circuito
+                      </Button>
+                    </Stack>
+                  </Box>
+
                   <TextField
                     select
                     label="Circuito vinculado"

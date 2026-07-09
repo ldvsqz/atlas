@@ -38,7 +38,8 @@
   height: 60px;
 }
 
-.nav-text a, button {
+.nav-text a,
+.nav-text button {
   text-decoration: none;
   color: #f4a949;
   font-size: 18px;
@@ -50,7 +51,8 @@
   border-radius: 4px;
 }
 
-.nav-text a:hover, button:hover {
+.nav-text a:hover,
+.nav-text button:hover {
   background-color: #1a83ff;
 }
 
@@ -71,7 +73,8 @@ span {
   margin-left: 16px;
 }
 
-button {
+.nav-menu button,
+.navbar-toggle button {
   background-color: transparent;
   border: none;
 }

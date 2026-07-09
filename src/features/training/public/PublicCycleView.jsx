@@ -208,7 +208,7 @@ function PublicCycleView() {
             stats.notes
             + (day.mainBlock?.notes?.trim() ? 1 : 0)
             + (day.shadowBlock?.notes?.trim() ? 1 : 0),
-          layouts: stats.layouts + (day.mainBlock?.gymLayoutId || day.mainBlock?.gymLayoutName ? 1 : 0),
+          layouts: stats.layouts + (day.mainBlock?.gymLayoutId || day.mainBlock?.gymLayoutName || day.mainBlock?.mainCircuit ? 1 : 0),
         }),
         { notes: 0, layouts: 0 }
       ),
@@ -219,7 +219,7 @@ function PublicCycleView() {
     () =>
       days.reduce(
         (total, day) =>
-          total + (day.mainBlock?.notes?.trim() || day.shadowBlock?.notes?.trim() || day.mainBlock?.gymLayoutId || day.mainBlock?.gymLayoutName ? 1 : 0),
+          total + (day.mainBlock?.notes?.trim() || day.shadowBlock?.notes?.trim() || day.mainBlock?.gymLayoutId || day.mainBlock?.gymLayoutName || day.mainBlock?.mainCircuit ? 1 : 0),
         0
       ),
     [days]
