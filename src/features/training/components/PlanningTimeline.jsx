@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   CircularProgress,
-  Divider,
   Stack,
   Tooltip,
   Typography,
@@ -77,16 +76,16 @@ const buildWeekGroups = (days, weeks) => {
 
 function TimelineLayerLabel({ label, detail }) {
   return (
-    <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0 }}>
-      <Typography variant="caption" color="text.secondary" fontWeight={900} sx={{ textTransform: 'uppercase', flexShrink: 0 }}>
+    <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0, mb: 0.2 }}>
+      <Typography variant="caption" color="text.secondary" fontWeight={900} sx={{ textTransform: 'uppercase', letterSpacing: 0.8, flexShrink: 0 }}>
         {label}
       </Typography>
       {detail && (
-        <Typography variant="caption" color="text.secondary" noWrap>
+        <Typography variant="caption" color="text.secondary" noWrap sx={{ opacity: 0.85 }}>
           {detail}
         </Typography>
       )}
-      <Box sx={{ height: 1, flex: 1, bgcolor: 'divider', minWidth: 24 }} />
+      <Box sx={{ height: 1, flex: 1, bgcolor: 'divider', minWidth: 18, opacity: 0.7 }} />
     </Stack>
   );
 }
@@ -116,8 +115,11 @@ function PlanningTimeline({ cycle }) {
   const selectedMesoGroup = mesocycleGroups.find(
     (group) => selectedWeek >= group.startWeek && selectedWeek <= group.endWeek
   );
-  const timelineMobileWidth = Math.max(weekCount * 116, 420);
-  const timelineDesktopWidth = Math.max(weekCount * 144, 640);
+  const selectedWeekSummary = selectedWeekGroup?.days?.length
+    ? `${selectedWeekGroup.days.length} sesión${selectedWeekGroup.days.length === 1 ? '' : 'es'}`
+    : 'Sin sesiones';
+  const timelineMobileWidth = Math.max(weekCount * 72, 300);
+  const timelineDesktopWidth = Math.max(weekCount * 92, 300);
 
   useEffect(() => {
     if (!weekGroups.some((weekGroup) => weekGroup.weekIndex === selectedWeek)) {
@@ -172,41 +174,58 @@ function PlanningTimeline({ cycle }) {
           bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.035)' : 'grey.50',
         }}
       >
-        <Box sx={{ p: { xs: 1.25, sm: 2 }, pb: 1 }}>
+        <Box sx={{ p: { xs: 0.5, sm: 0.7 }, pb: 0.4 }}>
           <Box
             sx={{
               overflowX: 'auto',
-              mx: { xs: -1.25, sm: -2 },
-              px: { xs: 1.25, sm: 2 },
-              pb: 1.25,
+              mx: { xs: -0.5, sm: -0.7 },
+              px: { xs: 0.5, sm: 0.7 },
+              pb: 0.35,
               WebkitOverflowScrolling: 'touch',
             }}
           >
-            <Stack spacing={1.15} sx={{ minWidth: { xs: timelineMobileWidth, sm: timelineDesktopWidth } }}>
+            <Stack spacing={0.35} sx={{ minWidth: { xs: timelineMobileWidth, sm: timelineDesktopWidth } }}>
               <TimelineLayerLabel label="Temporada" detail="Vista completa" />
 
               <Box
                 sx={{
                   borderRadius: 1,
-                  px: { xs: 1.25, sm: 2 },
-                  py: 1.25,
+                  px: { xs: 0.6, sm: 0.75 },
+                  py: 0.45,
                   bgcolor: (theme) => getTimelineColor(theme, 'macro'),
                   color: (theme) => theme.palette.getContrastText(getTimelineColor(theme, 'macro')),
                   boxShadow: 1,
                 }}
               >
-                <Typography variant="subtitle2" fontWeight={900} sx={{ overflowWrap: 'anywhere' }}>
+                <Typography variant="subtitle2" fontWeight={900} sx={{ overflowWrap: 'anywhere', lineHeight: 1.05, fontSize: '0.8rem' }}>
                   {cycle.name}
                 </Typography>
-                <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                <Typography variant="caption" sx={{ opacity: 0.9, display: 'block', mt: 0.05, fontSize: '0.62rem' }}>
                   {CYCLE_LABELS[cycle.type] || 'Ciclo'} · {weekCount} microciclo{weekCount === 1 ? '' : 's'}
+                </Typography>
+              </Box>
+
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  px: 0.1,
+                  py: 0.02,
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                  Semana {selectedWeek} · {selectedWeekSummary}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {selectedMesoGroup?.label || 'Mesociclo 1'}
                 </Typography>
               </Box>
               <Box
                 sx={{
                   display: 'grid',
                   gridTemplateColumns: `repeat(${weekCount}, minmax(0, 1fr))`,
-                  gap: 0.75,
+                  gap: 0.45,
                 }}
               >
                 {mesocycleGroups.map((group) => (
@@ -216,18 +235,18 @@ function PlanningTimeline({ cycle }) {
                       sx={{
                         gridColumn: `span ${group.weeks}`,
                         borderRadius: 1,
-                        px: 1.25,
-                        py: 0.9,
-                        minHeight: 48,
+                        px: 0.45,
+                        py: 0.35,
+                        minHeight: 28,
                         bgcolor: (theme) => getTimelineColor(theme, 'meso'),
                         color: (theme) => theme.palette.getContrastText(getTimelineColor(theme, 'meso')),
                         boxShadow: selectedMesoGroup?.id === group.id ? 2 : 0,
                       }}
                     >
-                      <Typography variant="caption" component="div" fontWeight={900} noWrap>
+                      <Typography variant="caption" component="div" fontWeight={900} noWrap sx={{ lineHeight: 1.05, fontSize: '0.64rem' }}>
                         {group.label}
                       </Typography>
-                      <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                      <Typography variant="caption" sx={{ opacity: 0.9, display: 'block', mt: 0.04, fontSize: '0.58rem' }}>
                         S{group.startWeek}-{group.endWeek}
                       </Typography>
                     </Box>
@@ -238,7 +257,7 @@ function PlanningTimeline({ cycle }) {
                 sx={{
                   display: 'grid',
                   gridTemplateColumns: `repeat(${weekCount}, minmax(0, 1fr))`,
-                  gap: 0.75,
+                  gap: 0.45,
                 }}
               >
                 {weekGroups.map((weekGroup) => {
@@ -257,26 +276,25 @@ function PlanningTimeline({ cycle }) {
                         onClick={() => setSelectedWeek(weekGroup.weekIndex)}
                         sx={{
                           border: '1px solid',
-                          borderColor: isSelected ? 'primary.main' : 'transparent',
+                          borderColor: isSelected ? 'primary.main' : 'rgba(255,255,255,0.16)',
                           borderRadius: 1,
                           cursor: 'pointer',
-                          minHeight: 68,
-                          p: 1,
+                          minHeight: 30,
+                          p: 0.25,
                           textAlign: 'left',
-                          bgcolor: (theme) => getTimelineColor(theme, 'micro'),
+                          bgcolor: (theme) => isSelected
+                            ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)')
+                            : getTimelineColor(theme, 'micro'),
                           color: (theme) => theme.palette.getContrastText(getTimelineColor(theme, 'micro')),
-                          boxShadow: isSelected ? 3 : 0,
-                          outline: isSelected ? '2px solid' : '0 solid',
-                          outlineColor: 'primary.main',
-                          outlineOffset: 2,
-                          transition: 'transform 160ms ease, box-shadow 160ms ease, outline-width 160ms ease',
+                          boxShadow: isSelected ? 2 : 0,
+                          transition: 'transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease',
                           '&:hover': {
-                            boxShadow: 3,
+                            boxShadow: 2,
                             transform: 'translateY(-1px)',
                           },
                         }}
                       >
-                        <Typography variant="caption" component="div" fontWeight={900} noWrap>
+                        <Typography variant="caption" component="div" fontWeight={900} noWrap sx={{ lineHeight: 1.05, fontSize: '0.58rem' }}>
                           Micro {weekGroup.weekIndex}
                         </Typography>
                       </Box>
@@ -288,7 +306,7 @@ function PlanningTimeline({ cycle }) {
                 sx={{
                   display: 'grid',
                   gridTemplateColumns: `repeat(${weekCount}, minmax(0, 1fr))`,
-                  gap: 0.75,
+                  gap: 0.45,
                   alignItems: 'stretch',
                 }}
               >
@@ -298,10 +316,10 @@ function PlanningTimeline({ cycle }) {
                   return (
                     <Stack
                       key={weekGroup.weekIndex}
-                      spacing={0.45}
+                      spacing={0.3}
                       sx={{
-                        minHeight: 88,
-                        opacity: isSelectedWeek ? 1 : 0.32,
+                        minHeight: 46,
+                        opacity: isSelectedWeek ? 1 : 0.34,
                         transition: 'opacity 160ms ease',
                       }}
                     >
@@ -326,18 +344,22 @@ function PlanningTimeline({ cycle }) {
                               disabled={isSaving}
                               sx={{
                                 border: '1px solid',
-                                borderColor: isSelectedWeek ? 'primary.main' : 'transparent',
+                                borderColor: isSelectedWeek ? 'primary.main' : 'rgba(255,255,255,0.16)',
                                 borderRadius: 0.75,
                                 cursor: isSaving ? 'progress' : 'pointer',
                                 width: '100%',
-                                minHeight: 18,
-                                px: 0.65,
-                                py: 0.2,
+                                minHeight: 22,
+                                px: 0.25,
+                                py: 0.07,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                alignItems: 'center',
                                 textAlign: 'center',
                                 bgcolor: (theme) => getTimelineColor(theme, 'session'),
                                 color: (theme) => theme.palette.getContrastText(getTimelineColor(theme, 'session')),
                                 opacity: isSaving ? 0.65 : 1,
-                                transition: 'filter 160ms ease, transform 160ms ease',
+                                transition: 'filter 160ms ease, transform 160ms ease, border-color 160ms ease',
                                 '&:hover': {
                                   filter: 'brightness(1.06)',
                                   transform: 'translateY(-1px)',
@@ -348,24 +370,30 @@ function PlanningTimeline({ cycle }) {
                                 component="span"
                                 variant="caption"
                                 fontWeight={900}
-                                sx={{ display: 'block', lineHeight: 1.1, whiteSpace: 'nowrap' }}
+                                sx={{ display: 'block', lineHeight: 1.02, whiteSpace: 'nowrap', fontSize: '0.55rem' }}
                               >
                                 {dayLabel}
                               </Typography>
-                              {sessionMeta.hasContent && (
-                                <Box
+                              {sessionMeta.layoutName ? (
+                                <Typography
                                   component="span"
+                                  variant="caption"
                                   sx={{
                                     display: 'block',
-                                    width: 6,
-                                    height: 6,
-                                    borderRadius: '50%',
-                                    bgcolor: 'currentColor',
-                                    opacity: 0.9,
-                                    mx: 'auto',
-                                    mt: 0.25,
+                                    lineHeight: 1.05,
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    fontSize: '0.48rem',
+                                    opacity: 0.95,
+                                    mt: 0.08,
+                                    maxWidth: '100%',
                                   }}
-                                />
+                                >
+                                  {sessionMeta.layoutName}
+                                </Typography>
+                              ) : (
+                                <Box component="span" sx={{ display: 'block', height: '0.6rem', mt: 0.08 }} />
                               )}
                             </Box>
                           </Tooltip>

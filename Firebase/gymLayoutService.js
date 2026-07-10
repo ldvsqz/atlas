@@ -16,6 +16,8 @@ import {
   DEFAULT_GRID_ROWS,
   DEFAULT_LAYOUT_ID,
   createGymLayoutModel,
+  getGymExerciseCategoryColor,
+  EXERCISE_CATEGORIES,
   removeReservedCollisions,
 } from '../src/features/gymLayout/models/gymLayoutModels';
 
@@ -26,6 +28,10 @@ const mapDoc = (documentSnapshot) => ({
   id: documentSnapshot.id,
   ...documentSnapshot.data(),
 });
+
+const normalizeExerciseCategory = (category) => (
+  EXERCISE_CATEGORIES.includes(category) ? category : EXERCISE_CATEGORIES[0]
+);
 
 class GymLayoutService {
   static #instance;
@@ -45,13 +51,14 @@ class GymLayoutService {
 
   async createExercise(exercise) {
     const exerciseRef = doc(collection(db, GYM_EXERCISES_COLLECTION));
+    const category = normalizeExerciseCategory(exercise.category);
     const payload = {
       name: exercise.name.trim(),
       description: exercise.description.trim(),
       width: Number(exercise.width || 1),
       height: Number(exercise.height || 1),
-      color: exercise.color,
-      category: exercise.category?.trim() || '',
+      color: getGymExerciseCategoryColor(category),
+      category,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -62,13 +69,14 @@ class GymLayoutService {
 
   async updateExercise(exerciseId, exercise) {
     const exerciseRef = doc(db, GYM_EXERCISES_COLLECTION, exerciseId);
+    const category = normalizeExerciseCategory(exercise.category);
     const payload = {
       name: exercise.name.trim(),
       description: exercise.description.trim(),
       width: Number(exercise.width || 1),
       height: Number(exercise.height || 1),
-      color: exercise.color,
-      category: exercise.category?.trim() || '',
+      color: getGymExerciseCategoryColor(category),
+      category,
       updatedAt: serverTimestamp(),
     };
 

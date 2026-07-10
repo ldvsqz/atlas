@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -55,6 +56,7 @@ function SessionEditorDrawer({
 }) {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const navigate = useNavigate();
   const generatorRef = useRef(null);
   const [draft, setDraft] = useState(() => normalizeEditableDay(day));
   const [stationCategories, setStationCategories] = useState([]);
@@ -65,6 +67,9 @@ function SessionEditorDrawer({
     () => [...new Set(gymExercises.map((exercise) => exercise.category).filter(Boolean))].sort(),
     [gymExercises]
   );
+  const exerciseMap = useMemo(() => Object.fromEntries(
+    gymExercises.map((exercise) => [String(exercise.id), exercise])
+  ), [gymExercises]);
   const layoutOptions = useMemo(() => {
     const options = [...layouts];
 
@@ -82,6 +87,56 @@ function SessionEditorDrawer({
 
     return options;
   }, [draft?.mainBlock?.gymLayoutId, draft?.mainBlock?.gymLayoutName, layout, layouts]);
+
+  const selectedLinkedLayout = useMemo(() => {
+    if (!draft?.mainBlock?.gymLayoutId) return null;
+    return layoutOptions.find((option) => option.id === draft.mainBlock.gymLayoutId) || null;
+  }, [draft?.mainBlock?.gymLayoutId, layoutOptions]);
+
+  const circuitSummary = useMemo(() => {
+    const layoutName = draft?.mainBlock?.gymLayoutName || selectedLinkedLayout?.name || (draft?.mainBlock?.mainCircuit ? 'Circuito generado' : '');
+    const layoutNotes = selectedLinkedLayout?.listNotes || draft?.mainBlock?.notes || '';
+
+    if (selectedLinkedLayout) {
+      const items = Array.isArray(selectedLinkedLayout.items) ? selectedLinkedLayout.items : [];
+      const visibleItems = items
+        .slice(0, 4)
+        .map((item) => exerciseMap[String(item.exerciseId)]?.name || 'Ejercicio sin nombre')
+        .filter(Boolean);
+
+      return {
+        type: 'linked',
+        name: layoutName,
+        summary: `${items.length} ejercicio${items.length === 1 ? '' : 's'} · ${selectedLinkedLayout.rows || 6}x${selectedLinkedLayout.cols || 3}`,
+        details: visibleItems,
+        notes: layoutNotes,
+      };
+    }
+
+    if (draft?.mainBlock?.mainCircuit?.stations?.length) {
+      const stations = draft.mainBlock.mainCircuit.stations;
+      const visibleStations = stations
+        .slice(0, 4)
+        .map((station) => exerciseMap[String(station.exerciseId)]?.name || station.label || 'Estación')
+        .filter(Boolean);
+
+      return {
+        type: 'generated',
+        name: layoutName || 'Circuito generado',
+        summary: `${stations.length} estaciones · ${draft.mainBlock.mainCircuit.laps || 0} vueltas · ${draft.mainBlock.mainCircuit.workMinutes || 0} min`,
+        details: visibleStations,
+        notes: layoutNotes,
+      };
+    }
+
+    return {
+      type: 'none',
+      name: 'Sin circuito asignado',
+      summary: 'Elige un circuito vinculado o genera uno para esta sesión.',
+      details: [],
+      notes: '',
+    };
+  }, [draft?.mainBlock?.gymLayoutName, draft?.mainBlock?.mainCircuit, draft?.mainBlock?.notes, exerciseMap, selectedLinkedLayout]);
 
   useEffect(() => {
     if (open) {
@@ -285,73 +340,52 @@ function SessionEditorDrawer({
                 </Typography>
                 <Stack spacing={1.5} sx={{ mt: 1 }}>
                   <Box
-                    ref={generatorRef}
                     sx={{
                       border: '1px solid',
                       borderColor: 'divider',
                       borderRadius: 1,
+                      p: 1.25,
                       bgcolor: 'background.default',
-                      p: { xs: 1.25, sm: 1.5 },
                     }}
                   >
-                    <Stack spacing={1.25}>
-                      <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
-                        <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
-                          <MapIcon fontSize="small" color="primary" />
-                          <Typography variant="subtitle2" fontWeight={900}>
-                            Circuito principal
-                          </Typography>
-                        </Stack>
-                        {generatedStationCount > 0 && (
-                          <Typography variant="caption" color="text.secondary">
-                            {generatedStationCount} estaciones
-                          </Typography>
-                        )}
-                      </Stack>
-
-                      <Box
-                        sx={{
-                          display: 'grid',
-                          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-                          gap: 1,
-                        }}
-                      >
-                        {Array.from({ length: MAIN_CIRCUIT_STATION_COUNT }, (_, index) => (
-                          <TextField
-                            key={`station-category-${index + 1}`}
-                            select
-                            size="small"
-                            label={`Estación ${index + 1}`}
-                            value={stationCategories[index] || ''}
-                            onChange={(event) => updateStationCategory(index, event.target.value)}
-                            disabled={saving || gymExercisesLoading}
-                            fullWidth
-                          >
-                            {gymExerciseCategories.map((category) => (
-                              <MenuItem key={category} value={category}>
-                                {category}
-                              </MenuItem>
-                            ))}
-                          </TextField>
-                        ))}
+                    <Stack direction="row" spacing={1} alignItems="flex-start" justifyContent="space-between">
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="subtitle2" fontWeight={800}>
+                          Circuito asignado
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                          {circuitSummary.summary}
+                        </Typography>
                       </Box>
-
                       <Button
-                        type="button"
+                        size="small"
                         variant="outlined"
-                        startIcon={gymExercisesLoading ? <CircularProgress size={16} color="inherit" /> : <AutoAwesomeIcon />}
-                        onClick={handleGenerateCircuit}
-                        disabled={
-                          saving
-                          || gymExercisesLoading
-                          || stationCategories.length !== MAIN_CIRCUIT_STATION_COUNT
-                          || stationCategories.some((category) => !category)
-                        }
-                        fullWidth
+                        onClick={() => navigate('/gym-layout', { state: { layoutId: selectedLinkedLayout?.id } })}
+                        disabled={!selectedLinkedLayout?.id || saving}
                       >
-                        Generar circuito
+                        Editar
                       </Button>
                     </Stack>
+
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ mt: 1 }}>
+                      {circuitSummary.name}
+                    </Typography>
+
+                    {circuitSummary.details.length > 0 && (
+                      <Stack spacing={0.25} sx={{ mt: 0.75 }}>
+                        {circuitSummary.details.map((detail) => (
+                          <Typography key={detail} variant="caption" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
+                            • {detail}
+                          </Typography>
+                        ))}
+                      </Stack>
+                    )}
+
+                    {circuitSummary.notes && (
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75, overflowWrap: 'anywhere' }}>
+                        {circuitSummary.notes}
+                      </Typography>
+                    )}
                   </Box>
 
                   <TextField
