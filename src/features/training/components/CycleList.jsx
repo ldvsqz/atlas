@@ -25,10 +25,38 @@ import { buildMainCircuit } from '../utils/mainCircuitBuilder.js';
 import { useSnackbar } from '../../../Components/snackbar/AtlasSnackbar';
 import TrainingService from '../../../../Firebase/trainingService';
 import GymLayoutService from '../../../../Firebase/gymLayoutService';
+import dayjs from 'dayjs';
 
-const getGeneratedCycleName = (type) => {
-  const label = type === CYCLE_TYPES.MICRO ? 'Microciclo' : 'Mesociclo';
-  return `${label} generado ${new Date().toLocaleDateString('es-CR')}`;
+const MONTH_LABELS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+const formatCycleDate = (date) => {
+  const value = dayjs(date);
+  return `${value.date()}.${MONTH_LABELS[value.month()]}.${value.year()}`;
+};
+
+const formatCycleDateRange = (startDate, endDate) => {
+  const start = dayjs(startDate);
+  const end = dayjs(endDate);
+
+  if (start.year() === end.year() && start.month() === end.month()) {
+    return `${start.date()}-${end.date()}.${MONTH_LABELS[end.month()]}.${end.year()}`;
+  }
+
+  if (start.year() === end.year()) {
+    return `${start.date()}.${MONTH_LABELS[start.month()]}-${end.date()}.${MONTH_LABELS[end.month()]}.${end.year()}`;
+  }
+
+  return `${formatCycleDate(start)}-${formatCycleDate(end)}`;
+};
+
+const getSessionDate = (startDate, day) =>
+  dayjs(startDate).add((Number(day.weekIndex || 1) - 1) * 7 + Number(day.dayOfWeek || 1) - 1, 'day');
+
+const getMesocycleWeeksFromPeriod = (startDate, endDate) => {
+  const start = dayjs(startDate);
+  const end = dayjs(endDate);
+  const inclusiveDays = end.diff(start, 'day') + 1;
+  return Math.max(1, Math.ceil(inclusiveDays / 7));
 };
 
 const getWizardStationCategories = (gymExercises = [], dayIndex = 1) => {
@@ -50,6 +78,9 @@ function CycleList({ exercises = [] }) {
   const [search, setSearch] = useState('');
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardType, setWizardType] = useState(CYCLE_TYPES.MICRO);
+  const [wizardObjective, setWizardObjective] = useState('');
+  const [wizardStartDate, setWizardStartDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const [wizardEndDate, setWizardEndDate] = useState(dayjs().add(4, 'week').subtract(3, 'day').format('YYYY-MM-DD'));
   const [wizardSaving, setWizardSaving] = useState(false);
 
   const filteredCycles = useMemo(() => {
@@ -112,22 +143,51 @@ function CycleList({ exercises = [] }) {
         return;
       }
 
+      if (!wizardObjective.trim()) {
+        showSnackbar('Indica el objetivo del ciclo', 'warning');
+        return;
+      }
+
+      const cycleStart = dayjs(wizardStartDate);
+      const cycleEnd = wizardType === CYCLE_TYPES.MICRO
+        ? cycleStart.add(4, 'day')
+        : dayjs(wizardEndDate);
+
+      if (!cycleStart.isValid() || !cycleEnd.isValid() || cycleEnd.isBefore(cycleStart, 'day')) {
+        showSnackbar('Selecciona un periodo válido', 'warning');
+        return;
+      }
+
+      const weeks = wizardType === CYCLE_TYPES.MICRO
+        ? 1
+        : getMesocycleWeeksFromPeriod(cycleStart, cycleEnd);
+
+      if (wizardType === CYCLE_TYPES.MESO && weeks >= 12) {
+        showSnackbar('Un mesociclo debe durar menos de 12 microciclos', 'warning');
+        return;
+      }
+
+      const cycleName = formatCycleDateRange(cycleStart, cycleEnd);
+      const cycleDescription = `Objetivo: ${wizardObjective.trim()}\nAutogenerado.`;
       const generatedCycle = await TrainingService.createCycle({
-        name: getGeneratedCycleName(wizardType),
+        name: cycleName,
         type: wizardType,
-        description: 'Ciclo generado automáticamente con circuitos principales por sesión.',
-        weeks: wizardType === CYCLE_TYPES.MICRO ? 1 : 4,
+        description: cycleDescription,
+        weeks,
         public: true,
+        startsAt: cycleStart.toDate(),
       });
       const days = await TrainingService.getCycleDays(generatedCycle.id, generatedCycle.weeks);
 
       await Promise.all(days.map((day) => {
+        const sessionDate = getSessionDate(cycleStart, day);
+        const sessionName = formatCycleDate(sessionDate);
         const stationCategories = getWizardStationCategories(gymExercises, day.dayIndex);
         const mainCircuit = buildMainCircuit({
           stationCategories,
           exercises: gymExercises,
         });
-        const circuitName = `Circuito ${day.name || `Día ${day.dayIndex}`}`;
+        const circuitName = `Circuito ${sessionName}`;
         const stationExerciseIds = mainCircuit.stations.map((station) => station.exerciseId);
         const hasUniqueStations = new Set(stationExerciseIds).size === stationExerciseIds.length;
         const gymLayoutId = hasUniqueStations ? `wizard-${generatedCycle.id}-${day.id}` : '';
@@ -150,6 +210,7 @@ function CycleList({ exercises = [] }) {
 
         return saveLayout.then(() => TrainingService.updateCycleDay(generatedCycle.id, day.id, {
           ...day,
+          name: sessionName,
           mainBlock: {
             ...day.mainBlock,
             gymLayoutId,
@@ -161,6 +222,7 @@ function CycleList({ exercises = [] }) {
 
       await refreshCycles();
       setWizardOpen(false);
+      setWizardObjective('');
       showSnackbar('Ciclo y circuitos generados correctamente', 'success');
     } catch (error) {
       console.error('Error running planning wizard:', error);
@@ -266,7 +328,15 @@ function CycleList({ exercises = [] }) {
               select
               label="Tipo de ciclo"
               value={wizardType}
-              onChange={(event) => setWizardType(event.target.value)}
+              onChange={(event) => {
+                const nextType = event.target.value;
+                setWizardType(nextType);
+                if (nextType === CYCLE_TYPES.MICRO) {
+                  setWizardEndDate(dayjs(wizardStartDate).add(4, 'day').format('YYYY-MM-DD'));
+                } else {
+                  setWizardEndDate(dayjs(wizardStartDate).add(4, 'week').subtract(3, 'day').format('YYYY-MM-DD'));
+                }
+              }}
               disabled={wizardSaving}
               fullWidth
             >
@@ -274,8 +344,47 @@ function CycleList({ exercises = [] }) {
               <MenuItem value={CYCLE_TYPES.MESO}>Mesociclo</MenuItem>
             </TextField>
 
+            <TextField
+              label="Objetivo del ciclo"
+              value={wizardObjective}
+              onChange={(event) => setWizardObjective(event.target.value)}
+              disabled={wizardSaving}
+              minRows={2}
+              multiline
+              fullWidth
+            />
+
+            <TextField
+              type="date"
+              label="Inicio"
+              value={wizardStartDate}
+              onChange={(event) => {
+                setWizardStartDate(event.target.value);
+                if (wizardType === CYCLE_TYPES.MICRO) {
+                  setWizardEndDate(dayjs(event.target.value).add(4, 'day').format('YYYY-MM-DD'));
+                } else {
+                  setWizardEndDate(dayjs(event.target.value).add(4, 'week').subtract(3, 'day').format('YYYY-MM-DD'));
+                }
+              }}
+              disabled={wizardSaving}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+            />
+
+            {wizardType === CYCLE_TYPES.MESO && (
+              <TextField
+                type="date"
+                label="Fin"
+                value={wizardEndDate}
+                onChange={(event) => setWizardEndDate(event.target.value)}
+                disabled={wizardSaving}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+              />
+            )}
+
             <Typography variant="body2" color="text.secondary">
-              Se creará un {wizardType === CYCLE_TYPES.MICRO ? 'microciclo de 5 sesiones' : 'mesociclo de 4 microciclos'} y cada sesión quedará vinculada con su circuito principal.
+              Se creará {wizardType === CYCLE_TYPES.MICRO ? `el microciclo ${formatCycleDateRange(wizardStartDate, dayjs(wizardStartDate).add(4, 'day'))}` : `el mesociclo ${formatCycleDateRange(wizardStartDate, wizardEndDate)}`} y cada sesión quedará vinculada con su circuito principal.
             </Typography>
 
             {wizardSaving && (

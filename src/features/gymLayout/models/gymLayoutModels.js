@@ -26,33 +26,41 @@ export const RESERVED_GRID_CELLS = [
   },
 ];
 
-export const EXERCISE_COLORS = [
-  '#7C3AED',
-  '#0891B2',
-  '#16A34A',
-  '#EA580C',
-  '#DB2777',
-  '#2563EB',
-  '#65A30D',
-  '#DC2626',
-];
-
 export const EXERCISE_CATEGORIES = [
   'Técnica',
-  'Físico',
+  'Escuela de combate',
   'Coordinación',
+  'Acondicionamiento',
+  'Potencia y pliometría',
+  'Reacción',
 ];
 
-export const createGymExerciseModel = (values = {}) => ({
-  id: values.id || '',
-  name: values.name || '',
-  description: values.description || '',
-  width: Number(values.width || 1),
-  height: Number(values.height || 1),
-  color: values.color || EXERCISE_COLORS[0],
-  category: values.category || '',
-  createdAt: values.createdAt || null,
-});
+export const EXERCISE_CATEGORY_COLORS = {
+  Técnica: '#2563EB',
+  'Escuela de combate': '#7C3AED',
+  Coordinación: '#0891B2',
+  Acondicionamiento: '#16A34A',
+  'Potencia y pliometría"': '#EA580C',
+  Reacción: '#DB2777',
+};
+
+export const getGymExerciseCategoryColor = (category) =>
+  EXERCISE_CATEGORY_COLORS[category] || EXERCISE_CATEGORY_COLORS[EXERCISE_CATEGORIES[0]];
+
+export const createGymExerciseModel = (values = {}) => {
+  const category = EXERCISE_CATEGORIES.includes(values.category) ? values.category : EXERCISE_CATEGORIES[0];
+
+  return {
+    id: values.id || '',
+    name: values.name || '',
+    description: values.description || '',
+    width: Number(values.width || 1),
+    height: Number(values.height || 1),
+    category,
+    color: getGymExerciseCategoryColor(category),
+    createdAt: values.createdAt || null,
+  };
+};
 
 export const createGymLayoutModel = (values = {}) => ({
   id: values.id || DEFAULT_LAYOUT_ID,

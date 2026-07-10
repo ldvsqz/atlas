@@ -11,15 +11,13 @@ import {
   MenuItem,
   Stack,
   TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Typography,
 } from '@mui/material';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import {
   EXERCISE_CATEGORIES,
-  EXERCISE_COLORS,
   createGymExerciseModel,
+  getGymExerciseCategoryColor,
 } from '../models/gymLayoutModels';
 
 function CreateExerciseDialog({ open, onClose, onSubmit, saving = false, exercise = null }) {
@@ -31,6 +29,8 @@ function CreateExerciseDialog({ open, onClose, onSubmit, saving = false, exercis
   } = useForm({
     defaultValues: createGymExerciseModel(),
   });
+  const selectedCategory = useWatch({ control, name: 'category' });
+  const selectedColor = getGymExerciseCategoryColor(selectedCategory);
 
   useEffect(() => {
     reset(createGymExerciseModel(exercise || {}));
@@ -39,8 +39,9 @@ function CreateExerciseDialog({ open, onClose, onSubmit, saving = false, exercis
   const submit = async (values) => {
     await onSubmit({
       ...values,
-      width: Number(values.width),
-      height: Number(values.height),
+      width: Number(values.width || 1),
+      height: Number(values.height || 1),
+      color: getGymExerciseCategoryColor(values.category),
     });
     reset(createGymExerciseModel());
     onClose();
@@ -90,57 +91,18 @@ function CreateExerciseDialog({ open, onClose, onSubmit, saving = false, exercis
 
           <Grid item xs={12} sm={6}>
             <Controller
-              name="width"
-              control={control}
-              rules={{
-                required: 'Ancho requerido.',
-                min: { value: 1, message: 'Mínimo 1 columna.' },
-                max: { value: 3, message: 'Máximo 3 columnas.' },
-              }}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  type="number"
-                  label="Ancho"
-                  fullWidth
-                  inputProps={{ min: 1, max: 3 }}
-                  error={Boolean(errors.width)}
-                  helperText={errors.width?.message || 'Ejemplo: 1'}
-                />
-              )}
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name="height"
-              control={control}
-              rules={{
-                required: 'Alto requerido.',
-                min: { value: 1, message: 'Mínimo 1 fila.' },
-                max: { value: 6, message: 'Máximo 6 filas.' },
-              }}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  type="number"
-                  label="Alto"
-                  fullWidth
-                  inputProps={{ min: 1, max: 6 }}
-                  error={Boolean(errors.height)}
-                  helperText={errors.height?.message || 'Ejemplo: 2'}
-                />
-              )}
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={6}>
-            <Controller
               name="category"
               control={control}
+              rules={{ required: 'La categoría es obligatoria.' }}
               render={({ field }) => (
-                <TextField {...field} select label="Categoría" fullWidth>
-                  <MenuItem value="">Sin categoría</MenuItem>
+                <TextField
+                  {...field}
+                  select
+                  label="Categoría"
+                  fullWidth
+                  error={Boolean(errors.category)}
+                  helperText={errors.category?.message}
+                >
                   {EXERCISE_CATEGORIES.map((category) => (
                     <MenuItem key={category} value={category}>
                       {category}
@@ -152,53 +114,29 @@ function CreateExerciseDialog({ open, onClose, onSubmit, saving = false, exercis
           </Grid>
 
           <Grid item xs={12} sm={6}>
-            <Controller
-              name="color"
-              control={control}
-              rules={{ required: 'Color requerido.' }}
-              render={({ field }) => (
-                <Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.75 }}>
-                    Color
-                  </Typography>
-                  <ToggleButtonGroup
-                    exclusive
-                    value={field.value}
-                    onChange={(_, value) => value && field.onChange(value)}
-                    sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}
-                  >
-                    {EXERCISE_COLORS.map((color) => (
-                      <ToggleButton
-                        key={color}
-                        value={color}
-                        aria-label={`Color ${color}`}
-                        sx={{
-                          width: 32,
-                          height: 32,
-                          p: 0,
-                          borderRadius: '50%',
-                          border: '2px solid',
-                          borderColor: field.value === color ? 'text.primary' : 'divider',
-                          bgcolor: color,
-                          '&:hover': { bgcolor: color },
-                        }}
-                      />
-                    ))}
-                  </ToggleButtonGroup>
-                </Box>
-              )}
-            />
+            <Box sx={{ height: '100%', minHeight: 56, display: 'flex', alignItems: 'center', gap: 1.25 }}>
+              <Box
+                sx={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  bgcolor: selectedColor,
+                  border: '2px solid',
+                  borderColor: 'divider',
+                  flexShrink: 0,
+                }}
+              />
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                  Color automático
+                </Typography>
+                <Typography variant="body2" fontWeight={700}>
+                  {selectedCategory}
+                </Typography>
+              </Box>
+            </Box>
           </Grid>
 
-          <Grid item xs={12}>
-            <Stack direction="row" spacing={1.5} alignItems="center">
-              <Typography variant="body2" color="text.secondary">
-                Tamaños sugeridos:
-              </Typography>
-              <Typography variant="body2">Cuerdas 1x1</Typography>
-              <Typography variant="body2">Cambios de guardia 1x2</Typography>
-            </Stack>
-          </Grid>
         </Grid>
       </DialogContent>
       <DialogActions>
