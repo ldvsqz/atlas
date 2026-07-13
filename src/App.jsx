@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState, useEffect, useMemo } from "react";
+import React, { Suspense, lazy, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -21,35 +21,27 @@ const PublicCycleView = lazy(() => import("./features/training/public/PublicCycl
 const GymLayoutPage = lazy(() => import("./features/gymLayout/pages/GymLayoutPage"));
 const CashboxPage = lazy(() => import("./Pages/Finance/CashboxHistory"));
 
+const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: colors.deepOrange,
+    background: {
+      default: '#121212',
+      paper: '#1e1e1e',
+    },
+  },
+});
 
 function App() {
-  const [themeMode, setThemeMode] = useState(localStorage.getItem("THEME") || 'dark');
-
   useEffect(() => {
-    localStorage.setItem("THEME", themeMode);
-  }, [themeMode]);
-
-
-  const toggleThemeMode = () => {
-    setThemeMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
-  };
-
-  const theme = useMemo(
-    () =>
-      createTheme({
-        palette: {
-          mode: themeMode,
-          primary: themeMode == 'dark' ? colors.deepOrange : colors.blueGrey
-        },
-      }),
-    [themeMode]
-  );
+    localStorage.setItem("THEME", "dark");
+  }, []);
 
   const version = packageInfo.version;
-  const getMenu = (header = "Atlas") => (<Menu header={header} version={version} toggleThemeMode={toggleThemeMode} themeMode={themeMode} />);
+  const getMenu = (header = "Atlas") => (<Menu header={header} version={version} />);
 
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <Router>
         <RouteTracker>
