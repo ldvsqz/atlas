@@ -137,12 +137,15 @@ export const drawGymLayoutGrid = ({
       : 0;
     const labelPadding = Math.max(1, textPadding * 0.8);
     const labelY = hasImage ? itemY + height - labelHeight : itemY;
+    const stationBorderColor = hexToRgb(exercise.color);
+    const stationBorderWidth = 1;
 
-    doc.setFillColor(255, 255, 255);
-    doc.setDrawColor(148, 163, 184);
+    doc.setFillColor(0, 0, 0);
+    doc.setDrawColor(...stationBorderColor);
+    doc.setLineWidth(stationBorderWidth);
     doc.rect(itemX, itemY, width, height, 'FD');
     if (hasImage) {
-      doc.setFillColor(255, 255, 255);
+      doc.setFillColor(0, 0, 0);
       doc.rect(
         itemX + imagePadding,
         itemY + imagePadding,
@@ -161,15 +164,13 @@ export const drawGymLayoutGrid = ({
       });
 
       if (imageDrawn) {
-        doc.setFillColor(255, 255, 255);
+        doc.setFillColor(0, 0, 0);
         doc.rect(itemX + 1, labelY - 1, width - 2, labelHeight, 'F');
-        doc.setDrawColor(203, 213, 225);
-        doc.line(itemX + 1, labelY - 1, itemX + width - 1, labelY - 1);
       }
     }
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(fontSize);
-    doc.setTextColor(31, 41, 55);
+    doc.setTextColor(0, 255, 255);
     const textLines = getFittedLines(doc, exercise.name, width - labelPadding * 2, hasImage ? 2 : 3);
     const lineHeight = fontSize * 1.12;
     const textHeight = (textLines.length - 1) * lineHeight;
@@ -182,6 +183,10 @@ export const drawGymLayoutGrid = ({
       lineHeightFactor: 1.12,
       maxWidth: width - labelPadding * 2,
     });
+
+    doc.setDrawColor(...stationBorderColor);
+    doc.setLineWidth(stationBorderWidth);
+    doc.rect(itemX, itemY, width, height, 'D');
   });
 
   return { width: gridWidth, height: gridHeight };
