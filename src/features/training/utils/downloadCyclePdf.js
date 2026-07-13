@@ -4,28 +4,46 @@ import { BLOCK_LABELS, CYCLE_LABELS, normalizeFirestoreDate } from '../models/tr
 import { buildCircuitDetailsMap } from '../public/circuitLayoutUtils';
 import { drawGymLayoutGrid, splitText } from '../../gymLayout/utils/downloadGymLayoutPdf';
 
-const NOTES_COLUMN_WIDTH = 78;
-const CIRCUIT_COLUMN_WIDTH = 76;
+const NOTES_COLUMN_WIDTH = 80;
+const CIRCUIT_COLUMN_WIDTH = 120;
 const NOTES_CELL_PADDING = 3;
 const NOTES_TITLE_HEIGHT = 4;
 const NOTES_LINE_HEIGHT = 3.4;
 const NOTES_SECTION_GAP = 3;
-const CIRCUIT_CELL_HEIGHT = 84;
+const CIRCUIT_CELL_HEIGHT = 160;
 
 const getCombinedNoteSections = (day, circuitDetails) => {
   const notes = [];
+  const hasLinkedCircuit = Boolean(day.mainBlock?.gymLayoutId);
   const circuitNotes = circuitDetails?.layout?.listNotes?.trim();
+  const stationExercises = (circuitDetails?.stations || circuitDetails?.exercises || [])
+    .filter(Boolean)
+    .map((exercise, index) => {
+      const name = exercise?.name?.trim();
+      const description = exercise?.description?.trim();
+      if (!name) return null;
+      return `${index + 1}. ${name}${description ? `\n- ${description}` : ''}`;
+    })
+    .filter(Boolean);
 
   if (day.shadowBlock?.notes?.trim()) {
     notes.push({ title: BLOCK_LABELS.shadowBlock, text: day.shadowBlock.notes.trim() });
   }
 
-  if (day.mainBlock?.notes?.trim()) {
+  if (hasLinkedCircuit) {
+    if (stationExercises.length) {
+      notes.push({ title: 'Orden del circuito', text: stationExercises.join('\n\n') });
+    }
+
+    if (circuitNotes) {
+      notes.push({ title: 'Circuito', text: circuitNotes });
+    }
+  } else if (day.mainBlock?.notes?.trim()) {
     notes.push({ title: BLOCK_LABELS.mainBlock, text: day.mainBlock.notes.trim() });
   }
 
-  if (circuitNotes) {
-    notes.push({ title: 'Circuito', text: circuitNotes });
+  if (day.extraBlock?.notes?.trim()) {
+    notes.push({ title: BLOCK_LABELS.extraBlock, text: day.extraBlock.notes.trim() });
   }
 
   return notes;
@@ -49,17 +67,27 @@ const loadCircuitDetails = async (days = []) => {
   return buildCircuitDetailsMap({ layouts, exercises: gymExercises });
 };
 
-const countNotes = (days = []) =>
+const countNotes = (days = [], circuitDetails = {}) =>
   days.reduce(
-    (total, day) =>
-      total
-      + (day.shadowBlock?.notes?.trim() ? 1 : 0)
-      + (day.mainBlock?.notes?.trim() ? 1 : 0),
+    (total, day) => {
+      const details = circuitDetails[day.mainBlock?.gymLayoutId];
+      const hasLinkedCircuit = Boolean(day.mainBlock?.gymLayoutId);
+      const linkedCircuitNotes = hasLinkedCircuit && (
+        details?.layout?.listNotes?.trim()
+        || details?.stations?.length
+        || details?.exercises?.length
+      );
+
+      return total
+        + (day.shadowBlock?.notes?.trim() ? 1 : 0)
+        + (hasLinkedCircuit ? (linkedCircuitNotes ? 1 : 0) : (day.mainBlock?.notes?.trim() ? 1 : 0))
+        + (day.extraBlock?.notes?.trim() ? 1 : 0);
+    },
     0
   );
 
 const countLinkedLayouts = (days = []) =>
-  days.filter((day) => day.mainBlock?.gymLayoutId || day.mainBlock?.gymLayoutName || day.mainBlock?.mainCircuit).length;
+  days.filter((day) => day.mainBlock?.gymLayoutId).length;
 
 const groupDaysByWeek = (days) =>
   days.reduce((groups, day) => {
@@ -97,7 +125,8 @@ const buildWeekRows = (weekDays = [], circuitDetails = {}, doc) =>
     const details = circuitDetails[day.mainBlock?.gymLayoutId];
     const noteSections = getCombinedNoteSections(day, details);
     const notesMinHeight = getNotesCellHeight(doc, noteSections);
-    const circuitName = day.mainBlock?.gymLayoutName || details?.layout?.name || (day.mainBlock?.mainCircuit ? 'Circuito generado' : '');
+    const hasLinkedCircuit = Boolean(day.mainBlock?.gymLayoutId);
+    const circuitName = day.mainBlock?.gymLayoutName || details?.layout?.name || 'Circuito vinculado';
     const circuitCell = details?.layout
       ? {
         content: '',
@@ -108,10 +137,9 @@ const buildWeekRows = (weekDays = [], circuitDetails = {}, doc) =>
           fillColor: [255, 255, 255],
         },
       }
-      : (circuitName ? `Circuito: ${circuitName}\nGrid no disponible` : 'Sin circuito');
+      : (hasLinkedCircuit ? `Circuito: ${circuitName}\nGrid no disponible` : 'sin circuito');
 
     return [
-      `${day.name || `Día ${day.dayIndex}`}\nDía ${day.dayOfWeek || day.dayIndex}`,
       {
         content: noteSections.length ? '' : 'Sin notas',
         noteSections,
@@ -159,7 +187,7 @@ const drawCircuitGridCell = (doc, cell, { day, details }) => {
   const titleHeight = 9;
   const maxGridWidth = cell.width - padding * 2;
   const maxGridHeight = cell.height - titleHeight - padding * 2;
-  const cellSize = Math.min(11, maxGridWidth / cols, maxGridHeight / rows);
+  const cellSize = Math.min(23, maxGridWidth / cols, maxGridHeight / rows);
   const gridWidth = cellSize * cols;
   const gridX = cell.x + (cell.width - gridWidth) / 2;
   const gridY = cell.y + padding + titleHeight;
@@ -177,11 +205,11 @@ const drawCircuitGridCell = (doc, cell, { day, details }) => {
     x: gridX,
     y: gridY,
     cellSize,
-    fontSize: 4.5,
-    reservedFontSize: 4,
-    lineWidth: 0.15,
-    textPadding: 1,
-    textYOffset: 3.6,
+    fontSize: 6,
+    reservedFontSize: 5.5,
+    lineWidth: 0.25,
+    textPadding: 2,
+    textYOffset: 6,
   });
 };
 
@@ -194,21 +222,22 @@ export const downloadCyclePdf = async (cycle, exercises, providedDays = null, pr
   const createdAt = normalizeFirestoreDate(cycle.createdAt);
 
   doc.setTextColor(17, 24, 39);
-  doc.setFontSize(16);
-  doc.text(cycle.name || 'Ciclo de entrenamiento', 14, 16);
+  doc.setFontSize(12);
+  doc.text(cycle.name || 'Ciclo de entrenamiento', 14, 12);
 
-  doc.setFontSize(9);
+  doc.setFontSize(7.5);
   doc.setTextColor(75, 85, 99);
-  doc.text(`${CYCLE_LABELS[cycle.type] || cycle.type} · ${cycle.weeks || 1} microciclo${Number(cycle.weeks) === 1 ? '' : 's'}`, 14, 25);
-  doc.text(`Creado: ${createdAt?.isValid() ? createdAt.format('DD/MM/YYYY') : 'Sin fecha'}`, 14, 30);
+  doc.text(
+    `${CYCLE_LABELS[cycle.type] || cycle.type} · ${cycle.weeks || 1} microciclo${Number(cycle.weeks) === 1 ? '' : 's'} · Creado: ${createdAt?.isValid() ? createdAt.format('DD/MM/YYYY') : 'Sin fecha'}`,
+    14,
+    18
+  );
 
   autoTable(doc, {
-    startY: 40,
+    startY: 22,
     theme: 'plain',
-    head: [['Descripción']],
     body: [[cycle.description || 'Sin descripción']],
-    styles: { fontSize: 9, cellPadding: 3, textColor: [31, 41, 55] },
-    headStyles: { fillColor: [241, 245, 249], textColor: [31, 41, 55], fontStyle: 'bold' },
+    styles: { fontSize: 7.5, cellPadding: 2, textColor: [31, 41, 55] },
     bodyStyles: { fillColor: [249, 250, 251] },
   });
 
@@ -223,43 +252,44 @@ export const downloadCyclePdf = async (cycle, exercises, providedDays = null, pr
     body: [[
       `${Object.keys(groupDaysByWeek(days)).length || 1}\nSemanas`,
       `${days.length}\nSesiones`,
-      `${countNotes(days)}\nNotas`,
+      `${countNotes(days, circuitDetails)}\nNotas`,
       `${countLinkedLayouts(days)}\nCircuitos vinculados`,
     ]],
-    styles: { fontSize: 9, cellPadding: 3, halign: 'center', valign: 'middle' },
+    styles: { fontSize: 7.5, cellPadding: 2, halign: 'center', valign: 'middle' },
     bodyStyles: { fillColor: [236, 253, 245], textColor: [6, 78, 59], fontStyle: 'bold' },
   });
 
-  nextY = (doc.lastAutoTable?.finalY || nextY) + 10;
+  nextY = (doc.lastAutoTable?.finalY || nextY) + 7;
 
   if (days.length) {
     const groupedDays = groupDaysByWeek(days);
-    let tableStartY = nextY;
+    const sessions = Object.entries(groupedDays).flatMap(([weekIndex, weekDays]) =>
+      weekDays.map((day) => ({ weekIndex, day }))
+    );
 
-    Object.entries(groupedDays).forEach(([weekIndex, weekDays]) => {
-      if (tableStartY > 260) {
+    sessions.forEach(({ weekIndex, day }, index) => {
+      const sessionStartY = index === 0 ? nextY : 22;
+      if (index > 0) {
         doc.addPage();
-        tableStartY = 16;
       }
 
       doc.setFontSize(11);
       doc.setTextColor(17, 24, 39);
-      doc.text(`Microciclo ${weekIndex}`, 14, tableStartY);
+      doc.text(`Microciclo ${weekIndex} · ${day.name || `Día ${day.dayIndex}`} - dia ${day.dayOfWeek || day.dayIndex}`, 14, sessionStartY);
 
       autoTable(doc, {
-        startY: tableStartY + 4,
+        startY: sessionStartY + 6,
         theme: 'grid',
-        head: [['Sesión', 'Notas', 'Circuito']],
-        body: buildWeekRows(weekDays, circuitDetails, doc),
+        head: [['Notas', 'Circuito']],
+        body: buildWeekRows([day], circuitDetails, doc),
         rowPageBreak: 'avoid',
         pageBreak: 'auto',
         styles: { fontSize: 8.5, cellPadding: 3, valign: 'top', textColor: [31, 41, 55], lineColor: [226, 232, 240], overflow: 'linebreak' },
         headStyles: { fillColor: [34, 197, 94], textColor: [255, 255, 255], fontSize: 8.5, fontStyle: 'bold' },
         alternateRowStyles: { fillColor: [248, 250, 252] },
         columnStyles: {
-          0: { cellWidth: 30, fontStyle: 'bold' },
-          1: { cellWidth: NOTES_COLUMN_WIDTH },
-          2: { cellWidth: CIRCUIT_COLUMN_WIDTH, halign: 'center' },
+          0: { cellWidth: NOTES_COLUMN_WIDTH },
+          1: { cellWidth: CIRCUIT_COLUMN_WIDTH, halign: 'center' },
         },
         didDrawCell: (data) => {
           if (data.cell.raw?.noteSections) {
@@ -271,16 +301,13 @@ export const downloadCyclePdf = async (cycle, exercises, providedDays = null, pr
           }
         },
       });
-
-      tableStartY = (doc.lastAutoTable?.finalY || tableStartY) + 10;
     });
 
-    nextY = tableStartY;
+    nextY = doc.lastAutoTable?.finalY || 22;
   } else {
     doc.setFontSize(11);
     doc.text('Este ciclo no tiene días editables todavía.', 14, nextY);
     nextY += 10;
   }
-
   doc.save(`${sanitizeFileName(cycle.name)}.pdf`);
 };

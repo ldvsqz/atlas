@@ -32,9 +32,7 @@ const getLayoutStations = (layout, exercisesById) => {
 };
 
 function LayoutCatalogCard({ layout, stations, onOpen, onDelete }) {
-  const visibleStations = stations.slice(0, 6);
-  const remainingStations = Math.max(stations.length - visibleStations.length, 0);
-  const accentColor = visibleStations[0]?.color || '#2563EB';
+  const stationAccentColor = stations[0]?.color || '#2563EB';
 
   return (
     <Paper
@@ -51,7 +49,7 @@ function LayoutCatalogCard({ layout, stations, onOpen, onDelete }) {
       }}
       sx={{
         width: '100%',
-        minHeight: 178,
+        minHeight: 128,
         borderRadius: 2,
         p: 0,
         overflow: 'hidden',
@@ -67,59 +65,59 @@ function LayoutCatalogCard({ layout, stations, onOpen, onDelete }) {
           left: 0,
           top: 0,
           right: 0,
-          height: 4,
-          bgcolor: accentColor,
+          height: 3,
+          bgcolor: 'primary.main',
         },
         '&:hover': {
-          borderColor: accentColor,
+          borderColor: 'primary.main',
           boxShadow: (theme) => theme.palette.mode === 'dark'
-            ? '0 16px 34px rgba(0, 0, 0, 0.26)'
-            : `0 16px 34px ${alpha(accentColor, 0.14)}`,
-          transform: 'translateY(-2px)',
+            ? '0 10px 22px rgba(0, 0, 0, 0.22)'
+            : `0 10px 22px ${alpha(theme.palette.primary.main, 0.12)}`,
+          transform: 'translateY(-1px)',
         },
         '&:focus-visible': {
           outline: '2px solid',
-          outlineColor: accentColor,
+          outlineColor: 'primary.main',
           outlineOffset: 2,
         },
       }}
     >
       <Box
         sx={{
-          px: 1.5,
-          pt: 1.5,
-          pb: 1.25,
+          px: 1.1,
+          pt: 1.1,
+          pb: 0.9,
           borderBottom: '1px solid',
           borderColor: 'divider',
           bgcolor: (theme) => theme.palette.mode === 'dark'
-            ? alpha(accentColor, 0.12)
-            : alpha(accentColor, 0.055),
+            ? alpha(theme.palette.background.paper, 0.82)
+            : 'background.paper',
         }}
       >
-        <Stack direction="row" spacing={1} alignItems="flex-start">
+        <Stack direction="row" spacing={0.85} alignItems="center">
           <Box
             sx={{
-              width: 32,
-              height: 32,
+              width: 28,
+              height: 28,
               borderRadius: 1,
               display: 'grid',
               placeItems: 'center',
-              bgcolor: 'background.paper',
-              color: accentColor,
+              bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.18 : 0.1),
+              color: 'primary.main',
               flexShrink: 0,
-              boxShadow: '0 6px 18px rgba(15, 23, 42, 0.08)',
+              boxShadow: '0 4px 12px rgba(15, 23, 42, 0.07)',
             }}
           >
-            <MapIcon fontSize="small" />
+            <MapIcon sx={{ fontSize: 18 }} />
           </Box>
           <Box sx={{ minWidth: 0, flex: 1 }}>
             <Typography
-              variant="subtitle1"
+              variant="subtitle2"
               fontWeight={900}
               sx={{
-                lineHeight: 1.15,
+                lineHeight: 1.1,
                 display: '-webkit-box',
-                WebkitLineClamp: 2,
+                WebkitLineClamp: 1,
                 WebkitBoxOrient: 'vertical',
                 overflow: 'hidden',
                 overflowWrap: 'anywhere',
@@ -127,7 +125,7 @@ function LayoutCatalogCard({ layout, stations, onOpen, onDelete }) {
             >
               {layout.name || 'Circuito sin nombre'}
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.35, lineHeight: 1 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.2, lineHeight: 1 }}>
               {stations.length} estación{stations.length === 1 ? '' : 'es'}
             </Typography>
           </Box>
@@ -139,8 +137,8 @@ function LayoutCatalogCard({ layout, stations, onOpen, onDelete }) {
               onDelete?.(layout);
             }}
             sx={{
-              width: 30,
-              height: 30,
+              width: 28,
+              height: 28,
               borderRadius: 1,
               border: '1px solid',
               borderColor: 'divider',
@@ -161,14 +159,20 @@ function LayoutCatalogCard({ layout, stations, onOpen, onDelete }) {
 
       <Box
         sx={{
-          px: 1.5,
-          py: 1.25,
-          minHeight: 88,
+          px: 1.1,
+          py: 0.85,
+          minHeight: 54,
         }}
       >
-        {visibleStations.length ? (
-          <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-            {visibleStations.map((station, index) => (
+        {stations.length ? (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+              gap: 0.45,
+            }}
+          >
+            {stations.map((station, index) => (
               <Chip
                 key={station.id}
                 size="small"
@@ -176,35 +180,25 @@ function LayoutCatalogCard({ layout, stations, onOpen, onDelete }) {
                 label={`${index + 1}. ${station.name}`}
                 sx={{
                   maxWidth: '100%',
-                  height: 24,
+                  height: 21,
                   borderRadius: 1,
                   justifyContent: 'flex-start',
-                  borderColor: alpha(station.color || accentColor, 0.42),
-                  bgcolor: (theme) => alpha(station.color || accentColor, theme.palette.mode === 'dark' ? 0.12 : 0.055),
+                  minWidth: 0,
+                  borderColor: alpha(station.color || stationAccentColor, 0.42),
+                  bgcolor: (theme) => alpha(station.color || stationAccentColor, theme.palette.mode === 'dark' ? 0.12 : 0.055),
                   '& .MuiChip-label': {
                     minWidth: 0,
+                    width: '100%',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     fontWeight: 800,
-                    fontSize: 11.5,
+                    fontSize: 10.5,
+                    px: 0.7,
                   },
                 }}
               />
             ))}
-            {remainingStations > 0 && (
-              <Chip
-                size="small"
-                label={`+${remainingStations}`}
-                sx={{
-                  height: 24,
-                  borderRadius: 1,
-                  color: 'primary.main',
-                  bgcolor: (theme) => alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.18 : 0.1),
-                  fontWeight: 900,
-                }}
-              />
-            )}
-          </Stack>
+          </Box>
         ) : (
           <Box
             sx={{
@@ -212,10 +206,10 @@ function LayoutCatalogCard({ layout, stations, onOpen, onDelete }) {
               borderColor: 'divider',
               borderRadius: 1,
               px: 1.25,
-              py: 1,
+              py: 0.75,
             }}
           >
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="caption" color="text.secondary">
               Sin estaciones colocadas
             </Typography>
           </Box>
@@ -224,14 +218,14 @@ function LayoutCatalogCard({ layout, stations, onOpen, onDelete }) {
 
       <Box
         sx={{
-          px: 1.5,
-          py: 1,
+          px: 1.1,
+          py: 0.65,
           borderTop: '1px solid',
           borderColor: 'divider',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'flex-end',
-          color: accentColor,
+          color: 'primary.main',
           bgcolor: (theme) => theme.palette.mode === 'dark'
             ? alpha(theme.palette.common.white, 0.018)
             : alpha(theme.palette.common.black, 0.012),
@@ -241,7 +235,7 @@ function LayoutCatalogCard({ layout, stations, onOpen, onDelete }) {
           <Typography variant="caption" fontWeight={900}>
             Abrir circuito
           </Typography>
-          <ArrowForwardIcon sx={{ fontSize: 17 }} />
+          <ArrowForwardIcon sx={{ fontSize: 15 }} />
         </Stack>
       </Box>
     </Paper>
@@ -414,20 +408,20 @@ function LayoutCatalog({
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' },
-            gap: 1.5,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)', xl: 'repeat(4, 1fr)' },
+            gap: 1.25,
           }}
         >
           {[1, 2, 3, 4, 5, 6].map((item) => (
-            <Skeleton key={item} variant="rounded" height={184} sx={{ borderRadius: 2 }} />
+            <Skeleton key={item} variant="rounded" height={140} sx={{ borderRadius: 2 }} />
           ))}
         </Box>
       ) : catalogItems.length ? (
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' },
-            gap: 1.5,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)', xl: 'repeat(4, 1fr)' },
+            gap: 1.25,
           }}
         >
           {catalogItems.map(({ layout, stations }) => (

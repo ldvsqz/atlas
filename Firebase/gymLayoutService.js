@@ -55,6 +55,8 @@ class GymLayoutService {
     const payload = {
       name: exercise.name.trim(),
       description: exercise.description.trim(),
+      imageDataUrl: exercise.imageDataUrl || '',
+      imageName: exercise.imageName || '',
       width: Number(exercise.width || 1),
       height: Number(exercise.height || 1),
       color: getGymExerciseCategoryColor(category),
@@ -73,6 +75,8 @@ class GymLayoutService {
     const payload = {
       name: exercise.name.trim(),
       description: exercise.description.trim(),
+      imageDataUrl: exercise.imageDataUrl || '',
+      imageName: exercise.imageName || '',
       width: Number(exercise.width || 1),
       height: Number(exercise.height || 1),
       color: getGymExerciseCategoryColor(category),

@@ -188,15 +188,91 @@ function GymGrid({
                       border: `1.5px solid ${alpha(color, 0.45)}`,
                       bgcolor: alpha(color, 0.1),
                       display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      p: 1,
+                      gap: 0.5,
+                      p: 0.75,
                       boxSizing: 'border-box',
                       position: 'relative',
                       cursor: 'grab',
+                      overflow: 'hidden',
                       '&:active': { cursor: 'grabbing' }
                     }}
                   >
+                    {ex.imageDataUrl && (
+                      <Box
+                        sx={{
+                          width: '100%',
+                          flex: 1,
+                          minHeight: 0,
+                          borderRadius: 1,
+                          overflow: 'hidden',
+                          bgcolor: theme.palette.mode === 'dark' ? alpha('#ffffff', 0.08) : '#fff',
+                          border: '1px solid',
+                          borderColor: alpha(color, 0.22),
+                          display: 'grid',
+                          placeItems: 'center',
+                        }}
+                      >
+                        <Box
+                          component="img"
+                          src={ex.imageDataUrl}
+                          alt={ex.name}
+                          draggable={false}
+                          sx={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            userSelect: 'none',
+                            pointerEvents: 'none',
+                          }}
+                        />
+                      </Box>
+                    )}
+
+                    <Box
+                        sx={{
+                          width: '100%',
+                          minHeight: ex.imageDataUrl ? 28 : '100%',
+                          borderRadius: 1,
+                          px: 0.75,
+                          py: 0.45,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          bgcolor: ex.imageDataUrl
+                            ? (theme.palette.mode === 'dark' ? alpha('#020617', 0.72) : alpha('#ffffff', 0.92))
+                            : alpha(color, theme.palette.mode === 'dark' ? 0.2 : 0.12),
+                          border: '1px solid',
+                          borderColor: alpha(color, ex.imageDataUrl ? 0.18 : 0.28),
+                          boxSizing: 'border-box',
+                          zIndex: 1,
+                        }}
+                    >
+                      <Typography
+                        variant="caption"
+                        fontWeight={900}
+                        align="center"
+                        sx={{
+                          color: ex.imageDataUrl
+                            ? (theme.palette.mode === 'dark' ? '#fff' : 'text.primary')
+                            : 'text.primary',
+                          fontSize: isMobile ? 10.5 : 12,
+                          lineHeight: 1.08,
+                          overflowWrap: 'anywhere',
+                          width: '100%',
+                          display: '-webkit-box',
+                          WebkitLineClamp: ex.imageDataUrl ? 2 : 4,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          userSelect: 'none',
+                        }}
+                      >
+                        {ex.name}
+                      </Typography>
+                    </Box>
+
                     {/* SOLUCIÓN AL MULTI-CLICK: Interceptamos en la fase de PointerDown */}
                     <IconButton
                       className="js-btn-eliminar" // Identificador para el bypass del fondo
@@ -259,27 +335,6 @@ function GymGrid({
                       />
                     </IconButton>
 
-                    <Typography 
-                      variant="caption" 
-                      fontWeight={800} 
-                      align="center" 
-                      sx={{ 
-                        color: 'text.primary', 
-                        fontSize: isMobile ? 10.5 : 12, 
-                        lineHeight: 1.1,
-                        overflowWrap: 'break-word',
-                        width: '100%',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        userSelect: 'none',
-                        px: 0.5,
-                        mt: 1 
-                      }}
-                    >
-                      {ex.name}
-                    </Typography>
                   </Box>
                 </Box>
               );

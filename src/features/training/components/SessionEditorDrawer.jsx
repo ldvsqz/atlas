@@ -93,9 +93,11 @@ function SessionEditorDrawer({
     return layoutOptions.find((option) => option.id === draft.mainBlock.gymLayoutId) || null;
   }, [draft?.mainBlock?.gymLayoutId, layoutOptions]);
 
+  const hasLinkedMainCircuit = Boolean(draft?.mainBlock?.gymLayoutId);
+
   const circuitSummary = useMemo(() => {
-    const layoutName = draft?.mainBlock?.gymLayoutName || selectedLinkedLayout?.name || (draft?.mainBlock?.mainCircuit ? 'Circuito generado' : '');
-    const layoutNotes = selectedLinkedLayout?.listNotes || draft?.mainBlock?.notes || '';
+    const layoutName = draft?.mainBlock?.gymLayoutName || selectedLinkedLayout?.name || 'Circuito vinculado';
+    const layoutNotes = selectedLinkedLayout ? selectedLinkedLayout.listNotes || '' : draft?.mainBlock?.notes || '';
 
     if (selectedLinkedLayout) {
       const items = Array.isArray(selectedLinkedLayout.items) ? selectedLinkedLayout.items : [];
@@ -110,6 +112,16 @@ function SessionEditorDrawer({
         summary: `${items.length} ejercicio${items.length === 1 ? '' : 's'} · ${selectedLinkedLayout.rows || 6}x${selectedLinkedLayout.cols || 3}`,
         details: visibleItems,
         notes: layoutNotes,
+      };
+    }
+
+    if (hasLinkedMainCircuit) {
+      return {
+        type: 'linked',
+        name: layoutName,
+        summary: 'Circuito vinculado sin detalles cargados.',
+        details: [],
+        notes: '',
       };
     }
 
@@ -136,7 +148,7 @@ function SessionEditorDrawer({
       details: [],
       notes: '',
     };
-  }, [draft?.mainBlock?.gymLayoutName, draft?.mainBlock?.mainCircuit, draft?.mainBlock?.notes, exerciseMap, selectedLinkedLayout]);
+  }, [draft?.mainBlock?.gymLayoutName, draft?.mainBlock?.mainCircuit, draft?.mainBlock?.notes, exerciseMap, hasLinkedMainCircuit, selectedLinkedLayout]);
 
   useEffect(() => {
     if (open) {
@@ -339,54 +351,56 @@ function SessionEditorDrawer({
                   {BLOCK_LABELS.mainBlock}
                 </Typography>
                 <Stack spacing={1.5} sx={{ mt: 1 }}>
-                  <Box
-                    sx={{
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      borderRadius: 1,
-                      p: 1.25,
-                      bgcolor: 'background.default',
-                    }}
-                  >
-                    <Stack direction="row" spacing={1} alignItems="flex-start" justifyContent="space-between">
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="subtitle2" fontWeight={800}>
-                          Circuito asignado
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-                          {circuitSummary.summary}
-                        </Typography>
-                      </Box>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => navigate('/gym-layout', { state: { layoutId: selectedLinkedLayout?.id } })}
-                        disabled={!selectedLinkedLayout?.id || saving}
-                      >
-                        Editar
-                      </Button>
-                    </Stack>
-
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ mt: 1 }}>
-                      {circuitSummary.name}
-                    </Typography>
-
-                    {circuitSummary.details.length > 0 && (
-                      <Stack spacing={0.25} sx={{ mt: 0.75 }}>
-                        {circuitSummary.details.map((detail) => (
-                          <Typography key={detail} variant="caption" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
-                            • {detail}
+                  {hasLinkedMainCircuit && (
+                    <Box
+                      sx={{
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        p: 1.25,
+                        bgcolor: 'background.default',
+                      }}
+                    >
+                      <Stack direction="row" spacing={1} alignItems="flex-start" justifyContent="space-between">
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography variant="subtitle2" fontWeight={800}>
+                            Circuito asignado
                           </Typography>
-                        ))}
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                            {circuitSummary.summary}
+                          </Typography>
+                        </Box>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => navigate('/gym-layout', { state: { layoutId: selectedLinkedLayout?.id } })}
+                          disabled={!selectedLinkedLayout?.id || saving}
+                        >
+                          Editar
+                        </Button>
                       </Stack>
-                    )}
 
-                    {circuitSummary.notes && (
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75, overflowWrap: 'anywhere' }}>
-                        {circuitSummary.notes}
+                      <Typography variant="subtitle2" fontWeight={700} sx={{ mt: 1 }}>
+                        {circuitSummary.name}
                       </Typography>
-                    )}
-                  </Box>
+
+                      {circuitSummary.details.length > 0 && (
+                        <Stack spacing={0.25} sx={{ mt: 0.75 }}>
+                          {circuitSummary.details.map((detail) => (
+                            <Typography key={detail} variant="caption" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
+                              • {detail}
+                            </Typography>
+                          ))}
+                        </Stack>
+                      )}
+
+                      {circuitSummary.notes && (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75, overflowWrap: 'anywhere' }}>
+                          {circuitSummary.notes}
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
 
                   <TextField
                     select
@@ -410,19 +424,47 @@ function SessionEditorDrawer({
                       </MenuItem>
                     ))}
                   </TextField>
-                  <TextField
-                    label="Notas del bloque principal"
-                    value={draft.mainBlock?.notes || ''}
-                    onChange={(event) => updateBlock('mainBlock', {
-                      ...draft.mainBlock,
-                      notes: event.target.value,
-                    })}
-                    disabled={saving}
-                    minRows={5}
-                    multiline
-                    fullWidth
-                  />
+                  {!hasLinkedMainCircuit && (
+                    <TextField
+                      label="Notas del bloque principal"
+                      value={draft.mainBlock?.notes || ''}
+                      onChange={(event) => updateBlock('mainBlock', {
+                        ...draft.mainBlock,
+                        notes: event.target.value,
+                      })}
+                      disabled={saving}
+                      minRows={5}
+                      multiline
+                      fullWidth
+                    />
+                  )}
                 </Stack>
+              </Box>
+
+              <Box
+                sx={{
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  bgcolor: 'background.paper',
+                  p: { xs: 1.5, sm: 2 },
+                }}
+              >
+                <Typography variant="overline" color="text.secondary" sx={{ mb: 1 }}>
+                  {BLOCK_LABELS.extraBlock}
+                </Typography>
+                <TextField
+                  label="Notas del bloque extra"
+                  value={draft.extraBlock?.notes || ''}
+                  onChange={(event) => updateBlock('extraBlock', {
+                    ...draft.extraBlock,
+                    notes: event.target.value,
+                  })}
+                  disabled={saving}
+                  minRows={3}
+                  multiline
+                  fullWidth
+                />
               </Box>
             </Stack>
           </Box>
