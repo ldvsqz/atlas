@@ -364,27 +364,13 @@ function GymLayoutPage({ menu }) {
           </Typography>
           <Button
             size="small"
-            color="inherit"
-            variant="outlined"
+            color="error"
+            variant="contained"
             startIcon={<CancelIcon />}
             onClick={() => setSelectedPaletteExercise(null)}
             sx={{ textTransform: 'none', borderRadius: 1.5, fontSize: 11 }}
           >
             Cancelar
-          </Button>
-          <Button
-            size="small"
-            color="error"
-            variant="contained"
-            disableElevation
-            startIcon={<DeleteSweepIcon />}
-            onClick={() => {
-              handleRemoveExerciseFromGrid(selectedPaletteExercise.id);
-              setSelectedPaletteExercise(null);
-            }}
-            sx={{ textTransform: 'none', borderRadius: 1.5, fontSize: 11 }}
-          >
-            Quitar
           </Button>
         </Paper>
       )}

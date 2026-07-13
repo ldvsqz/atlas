@@ -3,11 +3,9 @@ import { Box, Chip, Divider, Stack, Typography } from '@mui/material';
 import MapIcon from '@mui/icons-material/Map';
 import { getBlockTitle } from './publicCycleUtils';
 
-const BLOCKS = ['shadowBlock', 'mainBlock'];
-
 function TrainingBlock({ blockKey, block }) {
   const hasNotes = Boolean(block?.notes?.trim());
-  const hasLinkedLayout = blockKey === 'mainBlock' && Boolean(block?.gymLayoutId || block?.gymLayoutName || block?.mainCircuit);
+  const hasLinkedLayout = blockKey === 'mainBlock' && Boolean(block?.gymLayoutId);
 
   return (
     <Box
@@ -26,7 +24,7 @@ function TrainingBlock({ blockKey, block }) {
         {hasLinkedLayout && (
           <Chip
             icon={<MapIcon />}
-            label={block.gymLayoutName || (block.mainCircuit ? 'Circuito generado' : 'Circuito vinculado')}
+            label={block.gymLayoutName || 'Circuito vinculado'}
             size="small"
             variant="outlined"
             sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }}
@@ -70,9 +68,9 @@ function CircuitSummary({ block, circuitDetails }) {
       label: `Estación ${station.order}`,
       category: station.category,
     }));
-  const circuitName = block?.gymLayoutName || layout?.name || (block?.mainCircuit ? 'Circuito generado' : 'Circuito vinculado');
+  const circuitName = block?.gymLayoutName || layout?.name || 'Circuito vinculado';
 
-  if (!block?.gymLayoutId && !block?.gymLayoutName && !block?.mainCircuit) return null;
+  if (!block?.gymLayoutId) return null;
 
   return (
     <Box
@@ -123,6 +121,8 @@ function CircuitSummary({ block, circuitDetails }) {
 }
 
 function DayPrintCard({ day, circuitDetails }) {
+  const hasLinkedCircuit = Boolean(day.mainBlock?.gymLayoutId);
+
   return (
     <Box
       component="article"
@@ -154,14 +154,13 @@ function DayPrintCard({ day, circuitDetails }) {
       <Divider sx={{ my: 2 }} />
 
       <Stack spacing={2.25}>
-        {BLOCKS.map((blockKey) => (
-          <TrainingBlock
-            key={blockKey}
-            blockKey={blockKey}
-            block={day[blockKey]}
-          />
-        ))}
-        <CircuitSummary block={day.mainBlock} circuitDetails={circuitDetails} />
+        <TrainingBlock blockKey="shadowBlock" block={day.shadowBlock} />
+        {hasLinkedCircuit ? (
+          <CircuitSummary block={day.mainBlock} circuitDetails={circuitDetails} />
+        ) : (
+          <TrainingBlock blockKey="mainBlock" block={day.mainBlock} />
+        )}
+        <TrainingBlock blockKey="extraBlock" block={day.extraBlock} />
       </Stack>
     </Box>
   );

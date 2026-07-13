@@ -6,6 +6,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 // services and utilities
 import UserService from '../../../Firebase/userService';
 import FinanceService from '../../../Firebase/financeService';
+import StatService from '../../../Firebase/statsService';
 import Util from '../../assets/Util';
 import UserModel from '../../models/UserModel';
 import FinanceModel from '../../models/FinanceModel';
@@ -55,6 +56,7 @@ function User({ menu }) {
   const [focused, setFocused] = useState(false);
   const [showRenewAlert, setShowRenewAlert] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [latestStatsByUser, setLatestStatsByUser] = useState({});
   const [openAddUserModal, setOpenAddUserModal] = useState(false);
   const [checked, setChecked] = React.useState(true);
   const [showAdmins, setShowAdmins] = React.useState(false);
@@ -69,11 +71,65 @@ function User({ menu }) {
 
   const { showSnackbar } = useSnackbar();
 
+  const getSafeDate = (date) => {
+    if (!date) return null;
+    if (typeof date.toDate === 'function') return date.toDate();
+    if (typeof date.seconds === 'number') return util.getDateFromFirebase(date);
+
+    const parsedDate = new Date(date);
+    return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+  };
+
+  const getDateTime = (date) => {
+    const safeDate = getSafeDate(date);
+    return safeDate ? safeDate.getTime() : 0;
+  };
+
+  const getLatestStatsByUser = (stats = []) => stats.reduce((acc, stat) => {
+    if (!stat?.uid) return acc;
+
+    const currentStats = acc[stat.uid];
+    if (!currentStats || getDateTime(stat.date) > getDateTime(currentStats.date)) {
+      acc[stat.uid] = stat;
+    }
+
+    return acc;
+  }, {});
+
+  const getAgeLabel = (birthday) => {
+    const birthdayDate = getSafeDate(birthday);
+    if (!birthdayDate) return '—';
+
+    const age = util.getAge(birthdayDate);
+    return Number.isFinite(age) ? `${age} años` : '—';
+  };
+
+  const getWeightLabel = (user) => {
+    const weight = latestStatsByUser[user.uid]?.weight_kg;
+    const numericWeight = Number(weight);
+
+    if (!Number.isFinite(numericWeight) || numericWeight <= 0) return '—';
+
+    const formattedWeight = Number.isInteger(numericWeight)
+      ? numericWeight.toString()
+      : numericWeight.toFixed(1);
+
+    return `${formattedWeight} kg`;
+  };
+
 
   useEffect(() => {
     const fetchUsers = async () => {
-      const UsersData = await UserService.getAll();
+      const [UsersData, statsData = []] = await Promise.all([
+        UserService.getAll(),
+        StatService.getAll().catch((error) => {
+          console.error('Error fetching user stats:', error);
+          return [];
+        })
+      ]);
+
       setUsers(UsersData);
+      setLatestStatsByUser(getLatestStatsByUser(statsData || []));
       const activeUsers = UsersData.filter((user) => util.isMembershipDisplayable(user.until));
       setFilteredUsers(activeUsers);
       setLoading(false)
@@ -295,8 +351,11 @@ function User({ menu }) {
                         }}>
                         <TableCell onClick={() => handleViewProfile(user.uid)} sx={{ cursor: 'pointer' }}>
                           {user.name}
-                          </TableCell>
-                          {!showAdmins && (
+                          <Box sx={{ color: 'text.secondary', fontSize: '0.78rem', mt: 0.25 }}>
+                            {getAgeLabel(user.birthday)} · {getWeightLabel(user)}
+                          </Box>
+                        </TableCell>
+                        {!showAdmins && (
                         <TableCell
                           onClick={() => handleViewProfile(user.uid)}
                           sx={{

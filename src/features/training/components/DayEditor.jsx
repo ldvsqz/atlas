@@ -19,6 +19,7 @@ const normalizeDay = (day) => ({
   ...day,
   weekIndex: Number(day.weekIndex || Math.ceil((day.dayIndex || 1) / 5) || 1),
   dayOfWeek: Number(day.dayOfWeek || ((((day.dayIndex || 1) - 1) % 5) + 1) || 1),
+  shadowBlock: day.shadowBlock || createEmptyBlock(),
   mainBlock: day.mainBlock || createEmptyBlock(),
   extraBlock: day.extraBlock || createEmptyBlock(),
 });
@@ -86,6 +87,7 @@ function DayEditor({ cycleId, weeks = 1 }) {
             {weekDays.map((day) => {
               const draft = drafts[day.id] || normalizeDay(day);
               const isSaving = savingDayId === String(day.id);
+              const hasLinkedMainCircuit = Boolean(draft.mainBlock?.gymLayoutId);
 
               return (
                 <Accordion key={day.id} disableGutters sx={{ borderRadius: 1, '&:before': { display: 'none' } }}>
@@ -151,15 +153,43 @@ function DayEditor({ cycleId, weeks = 1 }) {
                   <Typography variant="overline" color="text.secondary" sx={{ mb: 1 }}>
                     {BLOCK_LABELS.mainBlock}
                   </Typography>
+                  {!hasLinkedMainCircuit && (
+                    <TextField
+                      label="Notas del bloque principal"
+                      value={draft.mainBlock?.notes || ''}
+                      onChange={(event) => updateBlock(day.id, 'mainBlock', {
+                        ...draft.mainBlock,
+                        notes: event.target.value,
+                      })}
+                      disabled={isSaving}
+                      minRows={4}
+                      multiline
+                      fullWidth
+                    />
+                  )}
+                </Box>
+
+                <Box
+                  key="extraBlock"
+                  sx={{
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    p: 2,
+                  }}
+                >
+                  <Typography variant="overline" color="text.secondary" sx={{ mb: 1 }}>
+                    {BLOCK_LABELS.extraBlock}
+                  </Typography>
                   <TextField
-                    label="Notas del bloque principal"
-                    value={draft.mainBlock?.notes || ''}
-                    onChange={(event) => updateBlock(day.id, 'mainBlock', {
-                      ...draft.mainBlock,
+                    label="Notas del bloque extra"
+                    value={draft.extraBlock?.notes || ''}
+                    onChange={(event) => updateBlock(day.id, 'extraBlock', {
+                      ...draft.extraBlock,
                       notes: event.target.value,
                     })}
                     disabled={isSaving}
-                    minRows={4}
+                    minRows={3}
                     multiline
                     fullWidth
                   />

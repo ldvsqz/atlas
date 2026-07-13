@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Box,
-  Chip,
   IconButton,
   Stack,
   Typography,
@@ -14,10 +13,8 @@ import {
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import StraightenIcon from '@mui/icons-material/Straighten';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
-import { getExerciseSizeLabel } from '../models/gymLayoutModels';
 
 function ExerciseCard({
   exercise,
@@ -63,11 +60,33 @@ function ExerciseCard({
     >
       <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
         <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
-          <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
+          {exercise.imageDataUrl ? (
+            <Box
+              component="img"
+              src={exercise.imageDataUrl}
+              alt={exercise.name}
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: 1,
+                objectFit: 'cover',
+                border: '1px solid',
+                borderColor: alpha(color, 0.35),
+                flexShrink: 0,
+              }}
+            />
+          ) : (
+            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
+          )}
           <Box sx={{ minWidth: 0, flex: 1 }}>
             <Typography fontWeight={800} variant="body2" color="text.primary" noWrap sx={{ fontSize: 13.5 }}>
               {exercise.name}
             </Typography>
+            {exercise.description && (
+              <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', mt: 0.25 }}>
+                {exercise.description}
+              </Typography>
+            )}
           </Box>
         </Stack>
 
@@ -81,16 +100,6 @@ function ExerciseCard({
             <MoreVertIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
           </IconButton>
         </Stack>
-      </Stack>
-
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1 }}>
-        <Chip
-          icon={<StraightenIcon style={{ fontSize: 11 }} />}
-          label={getExerciseSizeLabel(exercise)}
-          size="small"
-          variant="outlined"
-          sx={{ fontSize: 10, height: 18, borderRadius: 1, borderColor: alpha(theme.palette.divider, 0.8) }}
-        />
       </Stack>
 
       {/* Menú nativo desplegable que flota sobre la app */}

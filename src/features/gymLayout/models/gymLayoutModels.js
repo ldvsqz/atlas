@@ -54,6 +54,8 @@ export const createGymExerciseModel = (values = {}) => {
     id: values.id || '',
     name: values.name || '',
     description: values.description || '',
+    imageDataUrl: values.imageDataUrl || '',
+    imageName: values.imageName || '',
     width: Number(values.width || 1),
     height: Number(values.height || 1),
     category,

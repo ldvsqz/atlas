@@ -93,8 +93,13 @@ function TimelineLayerLabel({ label, detail }) {
 const hasNotes = (block) => Boolean(block?.notes?.trim());
 
 const getSessionMeta = (day) => {
-  const noteCount = [day.shadowBlock, day.mainBlock].filter(hasNotes).length;
-  const layoutName = day.mainBlock?.gymLayoutName || (day.mainBlock?.mainCircuit ? 'Circuito generado' : '');
+  const hasLinkedMainCircuit = Boolean(day.mainBlock?.gymLayoutId);
+  const layoutName = hasLinkedMainCircuit ? day.mainBlock?.gymLayoutName || 'Circuito vinculado' : '';
+  const noteCount = [
+    day.shadowBlock,
+    hasLinkedMainCircuit ? null : day.mainBlock,
+    day.extraBlock,
+  ].filter(hasNotes).length;
 
   return {
     noteCount,

@@ -84,6 +84,22 @@ function LayoutExerciseList({
             >
               <Stack direction="row" spacing={1.25} alignItems="center">
                 <DragIndicatorIcon color="action" sx={{ flex: '0 0 auto' }} />
+                {exercise.imageDataUrl && (
+                  <Box
+                    component="img"
+                    src={exercise.imageDataUrl}
+                    alt={exercise.name}
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 1,
+                      objectFit: 'cover',
+                      border: '1px solid',
+                      borderColor: alpha(exercise.color || theme.palette.primary.main, 0.28),
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
                 <Box sx={{ minWidth: 0, flex: 1 }}>
                   <Typography fontWeight={800} variant="body2" sx={{ overflowWrap: 'anywhere', lineHeight: 1.2 }}>
                     {index + 1}. {exercise.name}

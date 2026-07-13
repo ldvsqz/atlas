@@ -35,6 +35,47 @@ export const softenColor = (hex) => {
   ];
 };
 
+const getImageFormat = (dataUrl = '') => {
+  const match = String(dataUrl).match(/^data:image\/([^;]+);/i);
+  const format = match?.[1]?.toUpperCase();
+  return format === 'JPG' ? 'JPEG' : format;
+};
+
+const drawContainedImage = ({ doc, dataUrl, x, y, width, height }) => {
+  if (!dataUrl || width <= 0 || height <= 0) return false;
+
+  try {
+    const props = doc.getImageProperties(dataUrl);
+    const imageRatio = props.width / props.height;
+    const boxRatio = width / height;
+    const drawWidth = imageRatio > boxRatio ? width : height * imageRatio;
+    const drawHeight = imageRatio > boxRatio ? width / imageRatio : height;
+    const drawX = x + (width - drawWidth) / 2;
+    const drawY = y + (height - drawHeight) / 2;
+
+    doc.addImage(dataUrl, getImageFormat(dataUrl), drawX, drawY, drawWidth, drawHeight);
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+
+const getFittedLines = (doc, text, maxWidth, maxLines = 2) => {
+  const lines = splitText(doc, text, maxWidth);
+  if (lines.length <= maxLines) return lines;
+
+  const nextLines = lines.slice(0, maxLines);
+  const lastIndex = nextLines.length - 1;
+  let lastLine = String(nextLines[lastIndex] || '');
+
+  while (lastLine.length > 1 && doc.getTextWidth(`${lastLine}...`) > maxWidth) {
+    lastLine = lastLine.slice(0, -1).trimEnd();
+  }
+
+  nextLines[lastIndex] = `${lastLine || String(lines[lastIndex] || '').slice(0, 1)}...`;
+  return nextLines;
+};
+
 export const drawGymLayoutGrid = ({
   doc,
   layout,
@@ -89,19 +130,58 @@ export const drawGymLayoutGrid = ({
     const itemY = y + item.y * cellSize;
     const width = item.w * cellSize;
     const height = item.h * cellSize;
-    const color = softenColor(exercise.color);
+    const hasImage = Boolean(exercise.imageDataUrl);
+    const imagePadding = Math.max(1, textPadding * 0.5);
+    const labelHeight = hasImage
+      ? Math.min(height * 0.42, Math.max(fontSize * 2.15, height * 0.28))
+      : 0;
+    const labelPadding = Math.max(1, textPadding * 0.8);
+    const labelY = hasImage ? itemY + height - labelHeight : itemY;
 
-    doc.setFillColor(...color);
+    doc.setFillColor(255, 255, 255);
     doc.setDrawColor(148, 163, 184);
     doc.rect(itemX, itemY, width, height, 'FD');
+    if (hasImage) {
+      doc.setFillColor(255, 255, 255);
+      doc.rect(
+        itemX + imagePadding,
+        itemY + imagePadding,
+        width - imagePadding * 2,
+        Math.max(1, height - labelHeight - imagePadding * 2),
+        'F'
+      );
+
+      const imageDrawn = drawContainedImage({
+        doc,
+        dataUrl: exercise.imageDataUrl,
+        x: itemX + imagePadding,
+        y: itemY + imagePadding,
+        width: width - imagePadding * 2,
+        height: Math.max(1, height - labelHeight - imagePadding * 2),
+      });
+
+      if (imageDrawn) {
+        doc.setFillColor(255, 255, 255);
+        doc.rect(itemX + 1, labelY - 1, width - 2, labelHeight, 'F');
+        doc.setDrawColor(203, 213, 225);
+        doc.line(itemX + 1, labelY - 1, itemX + width - 1, labelY - 1);
+      }
+    }
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(fontSize);
     doc.setTextColor(31, 41, 55);
-    doc.text(
-      splitText(doc, exercise.name, width - textPadding * 2),
-      itemX + textPadding,
-      itemY + textYOffset
-    );
+    const textLines = getFittedLines(doc, exercise.name, width - labelPadding * 2, hasImage ? 2 : 3);
+    const lineHeight = fontSize * 1.12;
+    const textHeight = (textLines.length - 1) * lineHeight;
+    const textY = hasImage
+      ? labelY + (labelHeight - textHeight) / 2 + fontSize * 0.34
+      : itemY + textYOffset;
+
+    doc.text(textLines, itemX + width / 2, textY, {
+      align: 'center',
+      lineHeightFactor: 1.12,
+      maxWidth: width - labelPadding * 2,
+    });
   });
 
   return { width: gridWidth, height: gridHeight };

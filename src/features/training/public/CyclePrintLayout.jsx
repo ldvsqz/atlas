@@ -61,13 +61,17 @@ const CyclePrintLayout = forwardRef(function CyclePrintLayout({ cycle, days, sho
   }, [cycle?.id, expandedWeeks]);
 
   const plannedNotes = days.reduce(
-    (total, day) =>
-      total
-      + (day.mainBlock?.notes?.trim() ? 1 : 0)
-      + (day.shadowBlock?.notes?.trim() ? 1 : 0),
+    (total, day) => {
+      const hasLinkedMainCircuit = Boolean(day.mainBlock?.gymLayoutId);
+
+      return total
+        + (day.shadowBlock?.notes?.trim() ? 1 : 0)
+        + (!hasLinkedMainCircuit && day.mainBlock?.notes?.trim() ? 1 : 0)
+        + (day.extraBlock?.notes?.trim() ? 1 : 0);
+    },
     0
   );
-  const linkedLayouts = days.filter((day) => day.mainBlock?.gymLayoutId || day.mainBlock?.gymLayoutName || day.mainBlock?.mainCircuit).length;
+  const linkedLayouts = days.filter((day) => day.mainBlock?.gymLayoutId).length;
 
   return (
     <Box

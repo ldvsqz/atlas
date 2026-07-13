@@ -203,13 +203,18 @@ function PublicCycleView() {
   const planningStats = useMemo(
     () =>
       days.reduce(
-        (stats, day) => ({
-          notes:
-            stats.notes
-            + (day.mainBlock?.notes?.trim() ? 1 : 0)
-            + (day.shadowBlock?.notes?.trim() ? 1 : 0),
-          layouts: stats.layouts + (day.mainBlock?.gymLayoutId || day.mainBlock?.gymLayoutName || day.mainBlock?.mainCircuit ? 1 : 0),
-        }),
+        (stats, day) => {
+          const hasLinkedMainCircuit = Boolean(day.mainBlock?.gymLayoutId);
+
+          return {
+            notes:
+              stats.notes
+              + (day.shadowBlock?.notes?.trim() ? 1 : 0)
+              + (!hasLinkedMainCircuit && day.mainBlock?.notes?.trim() ? 1 : 0)
+              + (day.extraBlock?.notes?.trim() ? 1 : 0),
+            layouts: stats.layouts + (hasLinkedMainCircuit ? 1 : 0),
+          };
+        },
         { notes: 0, layouts: 0 }
       ),
     [days]
@@ -218,8 +223,16 @@ function PublicCycleView() {
   const plannedSessions = useMemo(
     () =>
       days.reduce(
-        (total, day) =>
-          total + (day.mainBlock?.notes?.trim() || day.shadowBlock?.notes?.trim() || day.mainBlock?.gymLayoutId || day.mainBlock?.gymLayoutName || day.mainBlock?.mainCircuit ? 1 : 0),
+        (total, day) => {
+          const hasLinkedMainCircuit = Boolean(day.mainBlock?.gymLayoutId);
+          const hasVisibleMainNotes = !hasLinkedMainCircuit && day.mainBlock?.notes?.trim();
+          const hasContent = day.shadowBlock?.notes?.trim()
+            || hasVisibleMainNotes
+            || day.extraBlock?.notes?.trim()
+            || day.mainBlock?.gymLayoutId;
+
+          return total + (hasContent ? 1 : 0);
+        },
         0
       ),
     [days]

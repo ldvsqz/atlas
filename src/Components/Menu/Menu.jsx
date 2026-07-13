@@ -20,10 +20,7 @@ import AccountBoxIcon from "@mui/icons-material/AccountBox";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
 import InfoIcon from "@mui/icons-material/Info";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
-import DarkModeIcon from "@mui/icons-material/DarkMode";
-import LightModeIcon from "@mui/icons-material/LightMode";
 import GridOnIcon from "@mui/icons-material/GridOn";
-import ToggleButton from "@mui/material/ToggleButton";
 
 import { auth } from "../../../Firebase/authFunctions";
 import "./Menu.css";
@@ -32,16 +29,12 @@ function Menu({
   header,
   title,
   version,
-  toggleThemeMode,
 }) {
   const navigate = useNavigate();
 
   const [showMenu, setMenu] = useState(false);
   const [uid, setUid] = useState(() => localStorage.getItem("UID"));
   const [currentRol] = useState(() => localStorage.getItem("ROL"));
-  const [darkTheme, setDarkTheme] = useState(
-    () => localStorage.getItem("THEME") === "dark"
-  );
 
   const menuTitle = header || title || "";
   const isAdmin = String(currentRol) === "0";
@@ -57,10 +50,6 @@ function Menu({
       unsubscribe();
     };
   }, [navigate]);
-
-  useEffect(() => {
-    localStorage.setItem("THEME", darkTheme ? "dark" : "light");
-  }, [darkTheme]);
 
   const toggleDrawer = (open) => (event) => {
     if (
@@ -83,14 +72,6 @@ function Menu({
         state: { uid: storedUid },
       });
     }
-  };
-
-  const handleOnSwitchTheme = () => {
-    if (typeof toggleThemeMode === "function") {
-      toggleThemeMode();
-    }
-
-    setDarkTheme((currentValue) => !currentValue);
   };
 
   const list = () => (
@@ -199,16 +180,6 @@ function Menu({
                 </div>
               )}
             </Typography>
-
-            <div style={{ marginLeft: "auto" }}>
-              <ToggleButton
-                value="theme"
-                selected={darkTheme}
-                onChange={handleOnSwitchTheme}
-              >
-                {darkTheme ? <LightModeIcon /> : <DarkModeIcon />}
-              </ToggleButton>
-            </div>
           </Toolbar>
         </AppBar>
       </Box>
