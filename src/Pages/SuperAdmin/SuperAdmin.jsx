@@ -113,7 +113,7 @@ function SuperAdmin({ menu }) {
   };
 
   useEffect(() => {
-    refresh().catch(() => showSnackbar('No se pudo cargar la administración global.', 'error'));
+    refresh().catch(() => showSnackbar('No se pudo cargar la administración.', 'error'));
   }, []);
 
   const approve = async (request) => {
@@ -252,13 +252,6 @@ function SuperAdmin({ menu }) {
         <Card sx={{ mb: 3, borderRadius: 3, background: 'linear-gradient(135deg, #1b2730 0%, #294653 100%)', color: 'common.white', boxShadow: 3 }}>
           <CardContent sx={{ p: { xs: 2.5, md: 4 } }}>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems={{ xs: 'flex-start', md: 'center' }} justifyContent="space-between">
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <BusinessIcon sx={{ fontSize: 42, color: '#f4a949' }} />
-                <Box>
-                  <Typography variant="h4" fontWeight={700}>Administración global</Typography>
-                  <Typography sx={{ color: 'rgba(255,255,255,.72)', mt: .5 }}>Gestiona gimnasios, usuarios y solicitudes desde un solo lugar.</Typography>
-                </Box>
-              </Box>
               <Stack spacing={.5} sx={{ minWidth: { xs: '100%', md: 280 } }}>
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,.72)' }}>Gimnasio activo para administrar</Typography>
                 <Select
@@ -273,7 +266,7 @@ function SuperAdmin({ menu }) {
                 >
             {tenants.map((tenant) => <MenuItem key={tenant.id} value={tenant.id}>{tenant.name}</MenuItem>)}
                 </Select>
-                <Button variant="outlined" color="inherit" onClick={handleProvisionAccounts} disabled={provisioningAccounts} sx={{ mt: 1 }}>
+                <Button variant="outlined" color="inherit" onClick={handleProvisionAccounts} disabled={true} sx={{ mt: 1 }}>
                   {provisioningAccounts ? 'Creando cuentas...' : 'Crear cuentas para miembros existentes'}
                 </Button>
               </Stack>

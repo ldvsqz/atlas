@@ -79,13 +79,5 @@ span {
   border: none;
 }
 .header-text {
-  display: flex;
-  .version-text {
-    bottom: -7px;
-    position: relative;
-    
-    left: 5px;
-    color: #868585;
-    font-size: 12px;
-  }
+  display: block;
 }

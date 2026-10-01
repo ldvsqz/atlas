@@ -41,7 +41,7 @@ class Util {
         const diffMs = expireDate - now;
         const daysLeft = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-        if (daysLeft < -20) {
+        if (daysLeft < -15) {
             return 'gray'; // ⚪ Inactivo
         }
         if (daysLeft < 0) {

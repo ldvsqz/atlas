@@ -1,5 +1,6 @@
 import {
   collection,
+  arrayUnion,
   deleteDoc,
   deleteField,
   doc,
@@ -27,6 +28,8 @@ import { normalizeMainCircuit } from '../src/features/training/utils/mainCircuit
 const CYCLES_COLLECTION = 'cycles';
 const EXERCISES_COLLECTION = 'exercises';
 const DAYS_SUBCOLLECTION = 'days';
+const SETTINGS_COLLECTION = 'moduleSettings';
+const EXERCISE_OPTIONS_SETTING = 'trainingExerciseOptions';
 
 const mapDoc = (documentSnapshot) => ({
   id: documentSnapshot.id,
@@ -221,6 +224,56 @@ class TrainingService {
 
   async getMicrocycleDays(cycleId) {
     return this.getCycleDays(cycleId, 1);
+  }
+
+  async getMicrocyclePlan(cycleId, weekIndex) {
+    const snapshot = await getDoc(doc(db, CYCLES_COLLECTION, cycleId));
+    return snapshot.data()?.microcyclePlans?.[String(weekIndex)] || null;
+  }
+
+  async saveMicrocyclePlan(cycleId, weekIndex, { rows, description = '' }) {
+    const cycleRef = doc(db, CYCLES_COLLECTION, cycleId);
+    await updateDoc(cycleRef, {
+      [`microcyclePlans.${weekIndex}`]: {
+        description: String(description || '').trim(),
+        rows: rows.map((row) => ({
+          id: String(row.id),
+          exercise: String(row.exercise || ''),
+          cells: Object.fromEntries(
+            Object.entries(row.cells || {}).map(([dayIndex, value]) => [dayIndex, String(value || '')])
+          ),
+        })),
+        updatedAt: serverTimestamp(),
+      },
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  async getMicrocycleExerciseOptions() {
+    const gymId = await getCurrentGymId();
+    const optionsQuery = query(
+      collection(db, SETTINGS_COLLECTION),
+      where('gymId', '==', gymId),
+      where('moduleName', '==', EXERCISE_OPTIONS_SETTING)
+    );
+    const snapshot = await getDocs(optionsQuery);
+    const options = snapshot.docs[0]?.data()?.options;
+    return Array.isArray(options) ? options.filter((option) => typeof option === 'string') : [];
+  }
+
+  async addMicrocycleExerciseOption(option) {
+    const name = String(option || '').trim();
+    if (!name) throw new Error('Escribe el nombre del ejercicio.');
+
+    const gymId = await getCurrentGymId();
+    const settingRef = doc(db, SETTINGS_COLLECTION, `${gymId}__${EXERCISE_OPTIONS_SETTING}`);
+    await setDoc(settingRef, {
+      gymId,
+      moduleName: EXERCISE_OPTIONS_SETTING,
+      options: arrayUnion(name),
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    return name;
   }
 
   async updateCycleDay(cycleId, dayId, dayData) {

@@ -8,11 +8,9 @@ import UserService from '../../../Firebase/userService';
 import FinanceService from '../../../Firebase/financeService';
 import StatService from '../../../Firebase/statsService';
 import Util from '../../assets/Util';
-import UserModel from '../../models/UserModel';
 import FinanceModel from '../../models/FinanceModel';
 import { getCurrentGymId } from '../../../Firebase/tenant';
 import moduleSettings from '../../config/moduleSettings';
-import { createMemberWithTemporaryAccount } from '../../../Firebase/memberAuthService';
 //MUI
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -34,6 +32,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import DialogContentText from '@mui/material/DialogContentText';
 import Grid from '@mui/material/Grid';
 import Alert from '../../Components/Alert/Alert';
 import { Timestamp } from 'firebase/firestore';
@@ -61,14 +60,13 @@ function User({ menu }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [latestStatsByUser, setLatestStatsByUser] = useState({});
   const [openAddUserModal, setOpenAddUserModal] = useState(false);
-  const [newAccountCredentials, setNewAccountCredentials] = useState(null);
+  const [creatingUser, setCreatingUser] = useState(false);
   const [checked, setChecked] = React.useState(true);
   const [showAdmins, setShowAdmins] = React.useState(false);
   const [newUser, setNewUser] = useState({
     name: '',
     phone: '',
-    birthday: null,
-    role: 1
+    birthday: null
   });
   const navigate = useNavigate();
   const util = new Util();
@@ -119,17 +117,17 @@ function User({ menu }) {
 
   const getAgeLabel = (birthday) => {
     const birthdayDate = getSafeDate(birthday);
-    if (!birthdayDate) return '—';
+    if (!birthdayDate || !Number.isFinite(util.getAge(birthdayDate))) return '';
 
     const age = util.getAge(birthdayDate);
-    return Number.isFinite(age) ? `${age} años` : '—';
+    return Number.isFinite(age) && age > 0 ? `${age} años` : '';
   };
 
   const getWeightLabel = (user) => {
     const weight = latestStatsByUser[user.uid]?.weight_kg;
     const numericWeight = Number(weight);
 
-    if (!Number.isFinite(numericWeight) || numericWeight <= 0) return '—';
+    if (!Number.isFinite(numericWeight) || numericWeight <= 0) return '';
 
     const formattedWeight = Number.isInteger(numericWeight)
       ? numericWeight.toString()
@@ -234,9 +232,9 @@ function User({ menu }) {
   };
 
   const handleCloseAddUserModal = () => {
+    if (creatingUser) return;
     setOpenAddUserModal(false);
-
-    setNewUser(new UserModel('', '', '', '', '', '', null));
+    setNewUser({ name: '', phone: '', birthday: null });
   };
 
   const handleAddUserChange = (field, value) => {
@@ -247,31 +245,31 @@ function User({ menu }) {
   };
 
   const handleAddUserSubmit = async () => {
-    const email = (newUser.email || '').trim().toLowerCase();
-    if (!newUser.name.trim() || !email) {
-      showSnackbar('Nombre y correo son obligatorios.', 'error');
+    if (!newUser.name.trim() || !newUser.phone.trim() || !newUser.birthday) {
+      showSnackbar('Complete el nombre, número telefónico y fecha de nacimiento.', 'error');
       return;
     }
+
     try {
-      const birthdayDate = newUser.birthday ? newUser.birthday.toDate() : Timestamp.now();
+      setCreatingUser(true);
       const gymId = await getCurrentGymId();
-      const credentials = await createMemberWithTemporaryAccount({
-        name: newUser.name,
-        email,
-        phone: newUser.phone,
-        dni: newUser.dni,
-        birthday: birthdayDate.toDate().toISOString(),
+      await UserService.createMember({
+        name: newUser.name.trim(),
+        phone: newUser.phone.trim(),
+        birthday: newUser.birthday,
         gymId,
       });
       const UsersData = await UserService.getAll();
       setUsers(UsersData);
       setFilteredUsers(UsersData);
-      handleCloseAddUserModal();
-      setNewAccountCredentials(credentials);
-      showSnackbar('Usuario y cuenta de acceso creados.', 'success');
+      setOpenAddUserModal(false);
+      setNewUser({ name: '', phone: '', birthday: null });
+      showSnackbar('Usuario agregado correctamente.', 'success');
     } catch (error) {
       console.error('Error creating user:', error);
       showSnackbar(error.message || 'No se pudo crear el usuario.', 'error');
+    } finally {
+      setCreatingUser(false);
     }
   };
 
@@ -388,7 +386,7 @@ function User({ menu }) {
                         <TableCell onClick={() => handleViewProfile(user.uid)} sx={{ cursor: 'pointer' }}>
                           {user.name}
                           <Box sx={{ color: 'text.secondary', fontSize: '0.78rem', mt: 0.25 }}>
-                            {getAgeLabel(user.birthday)} · {getWeightLabel(user)}
+                            {getAgeLabel(user.birthday)} {user.weight !== undefined && user.weight !== null ? '·' : ''} {getWeightLabel(user)}
                           </Box>
                         </TableCell>
                         {!showAdmins && (
@@ -402,11 +400,6 @@ function User({ menu }) {
                             cursor: 'pointer'
                           }}>
                           {util.formatDateShort(util.getDateFromFirebase(user.until))} {user.rol === 0 && '(Admin)'}
-                          {getSafeDate(user.createdAt) && (
-                            <Box sx={{ color: 'text.secondary', fontSize: '0.78rem', mt: 0.25 }}>
-                              Desde {util.formatDateShort(util.getDateFromFirebase(user.createdAt))} · {formatMembershipTenure(user.createdAt)}
-                            </Box>
-                          )}
                         </TableCell>
                           )}
                         {!showAdmins && (
@@ -442,43 +435,45 @@ function User({ menu }) {
         open={openAddUserModal}
         onClose={handleCloseAddUserModal}
         aria-labelledby="add-user-dialog-title"
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle id="add-user-dialog-title">
-          Agregar Nuevo Usuario
+        <DialogTitle id="add-user-dialog-title" sx={{ px: { xs: 3, sm: 4 }, pt: 3 }}>
+          <Typography variant="h5" fontWeight={700}>
+            Agregar usuario
+          </Typography>
         </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
+        <DialogContent sx={{ px: { xs: 3, sm: 4 }, pb: 1 }}>
+          <DialogContentText sx={{ mb: 2, color: 'text.secondary' }}>
+            Registra los datos personales del nuevo miembro.
+          </DialogContentText>
+          <Grid container spacing={2.5}>
             <Grid item xs={12}>
               <TextField
                 fullWidth
+                autoFocus
+                required
                 label="Nombre completo"
-                variant="standard"
+                placeholder="Ej. María Rodríguez"
                 value={newUser.name}
                 onChange={(e) => handleAddUserChange('name', e.target.value)}
+                disabled={creatingUser}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 required
-                type="email"
-                label="Correo electrónico"
-                variant="standard"
-                value={newUser.email}
-                onChange={(e) => handleAddUserChange('email', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
+                type="tel"
                 label="Número telefónico"
-                variant="standard"
+                placeholder="Ej. 8888-8888"
                 value={newUser.phone}
                 onChange={(e) => handleAddUserChange('phone', e.target.value)}
+                disabled={creatingUser}
               />
             </Grid>
-
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6}>
               <LocalizationProvider
                 adapterLocale="es-ES"
                 dateAdapter={AdapterDayjs}>
@@ -487,31 +482,21 @@ function User({ menu }) {
                   label="Fecha de nacimiento"
                   maxDate={dayjs()}
                   value={newUser.birthday ? dayjs(newUser.birthday) : null}
-                  onChange={(newDate) => handleAddUserChange('birthday', newDate ? Timestamp.fromDate(new Date(newDate)) : null)}
+                  onChange={(newDate) => handleAddUserChange('birthday', newDate?.isValid() ? newDate.toDate() : null)}
+                  disabled={creatingUser}
+                  slotProps={{ textField: { fullWidth: true, required: true } }}
                 />
               </LocalizationProvider>
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseAddUserModal}>Cancelar</Button>
-          <Button onClick={handleAddUserSubmit} variant="contained">
-            Crear Usuario
+        <DialogActions sx={{ px: { xs: 3, sm: 4 }, py: 2.5, gap: 1 }}>
+          <Button onClick={handleCloseAddUserModal} disabled={creatingUser} color="inherit">
+            Cancelar
           </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={Boolean(newAccountCredentials)} onClose={() => setNewAccountCredentials(null)} fullWidth maxWidth="xs">
-        <DialogTitle>Cuenta creada</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Entregue estas credenciales al miembro. La contraseña temporal no volverá a mostrarse.
-          </Typography>
-          <TextField fullWidth label="Correo" value={newAccountCredentials?.email || ''} InputProps={{ readOnly: true }} sx={{ mb: 2 }} />
-          <TextField fullWidth label="Contraseña temporal" value={newAccountCredentials?.temporaryPassword || ''} InputProps={{ readOnly: true }} />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setNewAccountCredentials(null)}>Cerrar</Button>
+          <Button onClick={handleAddUserSubmit} variant="contained" disabled={creatingUser} sx={{ px: 3 }}>
+            {creatingUser ? 'Guardando…' : 'Agregar usuario'}
+          </Button>
         </DialogActions>
       </Dialog>
 

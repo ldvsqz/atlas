@@ -15,12 +15,6 @@ export async function createMemberEmailPasswordAccount(uid, temporaryPassword) {
   return response.data;
 }
 
-export async function createMemberWithTemporaryAccount(member) {
-  const call = httpsCallable(functions, 'createMemberWithTemporaryAccount');
-  const response = await call(member);
-  return response.data;
-}
-
 export async function provisionExistingMemberAccounts() {
   const call = httpsCallable(functions, 'provisionExistingMemberAccounts', { timeout: 540000 });
   const response = await call();

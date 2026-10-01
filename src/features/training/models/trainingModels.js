@@ -46,7 +46,7 @@ export const EQUIPMENT_OPTIONS = [
 
 export const EDITABLE_DAY_BLOCK_KEYS = ['mainBlock', 'extraBlock'];
 
-export const TRAINING_WEEK_DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+export const TRAINING_WEEK_DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 export const DAY_FLOW_STEPS = [
   {
@@ -78,8 +78,8 @@ export const createEmptyBlock = () => ({
 
 export const createDefaultCycleDays = (weeks = 1) =>
   Array.from({ length: Math.max(Number(weeks) || 1, 1) }, (_, weekIndex) =>
-    Array.from({ length: 5 }, (_, dayIndex) => {
-      const sequentialDay = (weekIndex * 5) + dayIndex + 1;
+    Array.from({ length: TRAINING_WEEK_DAYS.length }, (_, dayIndex) => {
+      const sequentialDay = (weekIndex * TRAINING_WEEK_DAYS.length) + dayIndex + 1;
 
       return {
         weekIndex: weekIndex + 1,

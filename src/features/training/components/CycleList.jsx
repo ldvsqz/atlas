@@ -42,6 +42,8 @@ import {
 import { useSnackbar } from '../../../Components/snackbar/AtlasSnackbar';
 import TrainingService from '../../../../Firebase/trainingService';
 import GymLayoutService from '../../../../Firebase/gymLayoutService';
+import { formatGymLayoutName } from '../../gymLayout/models/gymLayoutModels';
+import { MICROCYCLE_DAY_COUNT } from '../utils/microcycleWorksheet';
 import dayjs from 'dayjs';
 
 const MONTH_LABELS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -86,7 +88,7 @@ function CycleList({ exercises = [] }) {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardType, setWizardType] = useState(CYCLE_TYPES.MICRO);
   const [wizardStartDate, setWizardStartDate] = useState(dayjs().format('YYYY-MM-DD'));
-  const [wizardEndDate, setWizardEndDate] = useState(dayjs().add(4, 'week').subtract(3, 'day').format('YYYY-MM-DD'));
+  const [wizardEndDate, setWizardEndDate] = useState(dayjs().add(4, 'week').subtract(2, 'day').format('YYYY-MM-DD'));
   const [wizardSaving, setWizardSaving] = useState(false);
   const [wizardGymCategories, setWizardGymCategories] = useState([]);
   const [wizardCategoriesLoading, setWizardCategoriesLoading] = useState(false);
@@ -229,7 +231,7 @@ function CycleList({ exercises = [] }) {
 
       const cycleStart = dayjs(wizardStartDate);
       const cycleEnd = wizardType === CYCLE_TYPES.MICRO
-        ? cycleStart.add(4, 'day')
+        ? cycleStart.add(MICROCYCLE_DAY_COUNT - 1, 'day')
         : dayjs(wizardEndDate);
 
       if (!cycleStart.isValid() || !cycleEnd.isValid() || cycleEnd.isBefore(cycleStart, 'day')) {
@@ -296,7 +298,7 @@ function CycleList({ exercises = [] }) {
           stationCategories,
           exercises: gymExercises,
         });
-        const circuitName = `Circuito ${sessionName}`;
+        const circuitName = formatGymLayoutName(sessionDate.toDate());
         const stationExerciseIds = mainCircuit.stations.map((station) => station.exerciseId);
         const hasUniqueStations = new Set(stationExerciseIds).size === stationExerciseIds.length;
         const gymLayoutId = hasUniqueStations ? `wizard-${generatedCycle.id}-${day.id}` : '';
@@ -500,10 +502,9 @@ function CycleList({ exercises = [] }) {
             variant="outlined"
             startIcon={<AutoAwesomeIcon />}
             onClick={openGenerateDialog}
-            disabled={loading}
+            disabled={true}
             sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
-            Wizard
           </Button>
           <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateDialog} sx={{ width: { xs: '100%', sm: 'auto' } }}>
             Nuevo
@@ -576,9 +577,9 @@ function CycleList({ exercises = [] }) {
                 const nextType = event.target.value;
                 setWizardType(nextType);
                 if (nextType === CYCLE_TYPES.MICRO) {
-                  setWizardEndDate(dayjs(wizardStartDate).add(4, 'day').format('YYYY-MM-DD'));
+                  setWizardEndDate(dayjs(wizardStartDate).add(MICROCYCLE_DAY_COUNT - 1, 'day').format('YYYY-MM-DD'));
                 } else {
-                  setWizardEndDate(dayjs(wizardStartDate).add(4, 'week').subtract(3, 'day').format('YYYY-MM-DD'));
+                  setWizardEndDate(dayjs(wizardStartDate).add(4, 'week').subtract(2, 'day').format('YYYY-MM-DD'));
                 }
               }}
               disabled={wizardSaving}
@@ -595,9 +596,9 @@ function CycleList({ exercises = [] }) {
               onChange={(event) => {
                 setWizardStartDate(event.target.value);
                 if (wizardType === CYCLE_TYPES.MICRO) {
-                  setWizardEndDate(dayjs(event.target.value).add(4, 'day').format('YYYY-MM-DD'));
+                  setWizardEndDate(dayjs(event.target.value).add(MICROCYCLE_DAY_COUNT - 1, 'day').format('YYYY-MM-DD'));
                 } else {
-                  setWizardEndDate(dayjs(event.target.value).add(4, 'week').subtract(3, 'day').format('YYYY-MM-DD'));
+                  setWizardEndDate(dayjs(event.target.value).add(4, 'week').subtract(2, 'day').format('YYYY-MM-DD'));
                 }
               }}
               disabled={wizardSaving}
@@ -618,7 +619,7 @@ function CycleList({ exercises = [] }) {
             )}
 
             <Typography variant="body2" color="text.secondary">
-              Se creará {wizardType === CYCLE_TYPES.MICRO ? `el microciclo ${formatCycleDateRange(wizardStartDate, dayjs(wizardStartDate).add(4, 'day'))}` : `el mesociclo ${formatCycleDateRange(wizardStartDate, wizardEndDate)}`} y cada sesión quedará vinculada con su circuito principal.
+              Se creará {wizardType === CYCLE_TYPES.MICRO ? `el microciclo ${formatCycleDateRange(wizardStartDate, dayjs(wizardStartDate).add(MICROCYCLE_DAY_COUNT - 1, 'day'))}` : `el mesociclo ${formatCycleDateRange(wizardStartDate, wizardEndDate)}`} y cada sesión quedará vinculada con su circuito principal.
             </Typography>
 
             <Box>
@@ -663,7 +664,7 @@ function CycleList({ exercises = [] }) {
 
               {wizardType === CYCLE_TYPES.MICRO ? (
                 <Grid container spacing={1}>
-                  {Array.from({ length: 5 }, (_, index) => {
+                  {Array.from({ length: MICROCYCLE_DAY_COUNT }, (_, index) => {
                     const dayOfWeek = index + 1;
                     const loadKey = getSessionLoadKey(1, dayOfWeek);
                     return renderSessionLoadCard(wizardSessionLoads[loadKey] || { weekIndex: 1, dayOfWeek }, 1);

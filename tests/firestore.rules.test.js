@@ -7,12 +7,17 @@ import {
   initializeTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import {
+  arrayUnion,
+  collection,
   doc,
+  getDocs,
   getDoc,
+  query,
   setDoc,
   updateDoc,
+  where,
 } from 'firebase/firestore';
-import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 const rulesPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../firestore.rules');
 const projectId = 'atlas-gym-partner-rules-test';
@@ -100,6 +105,36 @@ maybeDescribe('users collection rules', () => {
     await assertSucceeds(getDoc(doc(db, 'users/member-user')));
   });
 
+  it('allows admins to create a member in their gym without an email', async () => {
+    const db = testEnv.authenticatedContext('admin-user').firestore();
+    await assertSucceeds(setDoc(doc(db, 'users/new-member'), {
+      uid: 'new-member',
+      name: 'New Member',
+      phone: '88888888',
+      birthday: new Date('2000-01-01'),
+      dni: '',
+      until: new Date(),
+      gymId: 'gym-a',
+      rol: 1,
+      createdAt: new Date(),
+    }));
+  });
+
+  it('blocks admins from creating a member in another gym', async () => {
+    const db = testEnv.authenticatedContext('admin-user').firestore();
+    await assertFails(setDoc(doc(db, 'users/new-member'), {
+      uid: 'new-member',
+      name: 'New Member',
+      phone: '88888888',
+      birthday: new Date('2000-01-01'),
+      dni: '',
+      until: new Date(),
+      gymId: 'gym-b',
+      rol: 1,
+      createdAt: new Date(),
+    }));
+  });
+
   it('allows members to read their own profile', async () => {
     const db = testEnv.authenticatedContext('member-user').firestore();
     await assertSucceeds(getDoc(doc(db, 'users/member-user')));
@@ -145,6 +180,35 @@ maybeDescribe('users collection rules', () => {
     });
     const db = testEnv.authenticatedContext('admin-user').firestore();
     await assertFails(getDoc(doc(db, 'users/other-gym-user')));
+  });
+});
+
+maybeDescribe('module settings rules', () => {
+  it('allows gym admins to persist shared microcycle exercise options', async () => {
+    const db = testEnv.authenticatedContext('admin-user').firestore();
+    const settingsRef = doc(db, 'moduleSettings/gym-a__trainingExerciseOptions');
+
+    await assertSucceeds(setDoc(settingsRef, {
+      gymId: 'gym-a',
+      moduleName: 'trainingExerciseOptions',
+      options: arrayUnion('Trabajo de cuerda'),
+    }, { merge: true }));
+
+    const snapshot = await assertSucceeds(getDocs(query(
+      collection(db, 'moduleSettings'),
+      where('gymId', '==', 'gym-a'),
+      where('moduleName', '==', 'trainingExerciseOptions'),
+    )));
+    expect(snapshot.docs[0].data().options).toEqual(['Trabajo de cuerda']);
+  });
+
+  it('blocks gym admins from adding microcycle exercise options to another gym', async () => {
+    const db = testEnv.authenticatedContext('admin-user').firestore();
+    await assertFails(setDoc(doc(db, 'moduleSettings/gym-b__trainingExerciseOptions'), {
+      gymId: 'gym-b',
+      moduleName: 'trainingExerciseOptions',
+      options: arrayUnion('Trabajo de cuerda'),
+    }, { merge: true }));
   });
 });
 
@@ -310,6 +374,17 @@ maybeDescribe('tenant-scoped business collection rules', () => {
 });
 
 maybeDescribe('public cycle rules', () => {
+  it('allows gym admins to save a weekly worksheet on their cycle', async () => {
+    await seedDocument('cycles', 'editable-cycle', 'gym-a', { public: true });
+    const db = testEnv.authenticatedContext('admin-user').firestore();
+
+    await assertSucceeds(updateDoc(doc(db, 'cycles/editable-cycle'), {
+      'microcyclePlans.1': {
+        rows: [{ id: 'row-1', exercise: 'Sombra', cells: { 1: "4x3'x1'" } }],
+      },
+    }));
+  });
+
   it('allows unauthenticated reads of public cycles and days', async () => {
     await seedDocument('cycles', 'public-cycle', 'gym-a', { public: true });
     await testEnv.withSecurityRulesDisabled(async (context) => {

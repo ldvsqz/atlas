@@ -22,6 +22,7 @@ import MapIcon from '@mui/icons-material/Map';
 import { BLOCK_LABELS, createEmptyBlock, normalizeCycleDay } from '../models/trainingModels';
 import { useGymLayout } from '../../gymLayout/hooks/useGymLayout';
 import { useGymExercises } from '../../gymLayout/hooks/useGymExercises';
+import { formatGymLayoutName } from '../../gymLayout/models/gymLayoutModels';
 import { buildMainCircuit, MAIN_CIRCUIT_STATION_COUNT } from '../utils/mainCircuitBuilder.js';
 import { useSnackbar } from '../../../Components/snackbar/AtlasSnackbar';
 
@@ -237,7 +238,7 @@ function SessionEditorDrawer({
         ...draft.mainBlock,
         mainCircuit,
         gymLayoutId: '',
-        gymLayoutName: 'Circuito generado',
+        gymLayoutName: formatGymLayoutName(),
       });
       showSnackbar('Circuito principal generado. Guarda la sesión para conservarlo.', 'success');
     } catch (error) {

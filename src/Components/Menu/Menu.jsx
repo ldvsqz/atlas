@@ -89,12 +89,12 @@ function Menu({
 
   const list = () => (
     <Box
-      sx={{ width: 250 }}
+      sx={{ width: 250, height: '100%', display: 'flex', flexDirection: 'column' }}
       role="presentation"
       onClick={toggleDrawer(false)}
       onKeyDown={toggleDrawer(false)}
     >
-      <List>
+      <List sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
         {isAdmin && (profile?.gymIds?.length > 1) && (
           <ListItem>
             <Select
@@ -148,15 +148,6 @@ function Menu({
           </ListItem>
         )}
 
-        {isSuperAdmin && (
-          <ListItem key="Administración global" disablePadding>
-            <ListItemButton component={Link} to="/super-admin">
-              <ListItemIcon><AdminPanelSettingsIcon /></ListItemIcon>
-              <ListItemText primary="Administración global" />
-            </ListItemButton>
-          </ListItem>
-        )}
-
         {isAdmin && (
           <ListItem key="Finanzas" disablePadding>
             <ListItemButton component={Link} to="/finance">
@@ -180,12 +171,12 @@ function Menu({
         )}
 
         {isAdmin && (
-          <ListItem key="Circuitos del gimnasio" disablePadding>
+          <ListItem key="Circuitos" disablePadding>
             <ListItemButton component={Link} to="/gym-layout">
               <ListItemIcon>
                 <GridOnIcon />
               </ListItemIcon>
-              <ListItemText primary="Circuitos del gimnasio" />
+              <ListItemText primary="Circuitos" />
             </ListItemButton>
           </ListItem>
         )}
@@ -201,6 +192,15 @@ function Menu({
           </ListItem>
         )}
 
+        {isSuperAdmin && (
+          <ListItem key="Administración" disablePadding>
+            <ListItemButton component={Link} to="/super-admin">
+              <ListItemIcon><AdminPanelSettingsIcon /></ListItemIcon>
+              <ListItemText primary="Administración" />
+            </ListItemButton>
+          </ListItem>
+        )}
+
         <ListItem key="Sobre nosotros" disablePadding>
           <ListItemButton component={Link} to="/aboutus">
             <ListItemIcon>
@@ -210,12 +210,30 @@ function Menu({
           </ListItemButton>
         </ListItem>
 
+      </List>
+      <Box sx={{ mt: 'auto' }}>
+        {(isAdmin && activeGymName) || version ? (
+          <>
+            <Divider />
+            <Box sx={{ px: 2, py: 1.5 }}>
+              {isAdmin && activeGymName && (
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ lineHeight: 1.4, overflowWrap: 'anywhere' }}>
+                  Administrando: {activeGymName}
+                </Typography>
+              )}
+              {version && (
+                <Typography variant="caption" color="text.disabled" display="block" sx={{ mt: 0.25 }}>
+                  Versión {version}
+                </Typography>
+              )}
+            </Box>
+          </>
+        ) : null}
         <Divider />
-
         <ListItem key="logout" disablePadding>
           <Logout />
         </ListItem>
-      </List>
+      </Box>
     </Box>
   );
 
@@ -240,17 +258,7 @@ function Menu({
             >
               {menuTitle}
 
-              {version && (
-                <div className="version-text">
-                  {version}
-                </div>
-              )}
             </Typography>
-            {isAdmin && activeGymName && (
-            <Typography variant="body2" sx={{ ml: 2, maxWidth: 260, textAlign: 'right' }}>
-              Administrando: {activeGymName}
-            </Typography>
-            )}
           </Toolbar>
         </AppBar>
       </Box>

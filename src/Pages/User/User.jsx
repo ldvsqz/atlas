@@ -44,7 +44,7 @@ import SetStats from '../../Components/Stats/SetStats';
 import { useSnackbar } from '../../Components/snackbar/AtlasSnackbar';
 //serives and utilities
 import StatService from '../../../Firebase/statsService';
-import UserService from '../../../Firebase/userService';
+import UserService, { isGeneratedMemberProfileEmail } from '../../../Firebase/userService';
 import RoutineService from '../../../Firebase/RoutineService';
 import Util from '../../assets/Util';
 import UserModel from "../../models/UserModel";
@@ -388,14 +388,14 @@ function User({ menu }) {
                             onResponse={handleOnRenew}
                           />
                         )}
-                        {isOwnProfile && memberAuthStatus.hasEmailPassword && (
+                        {isOwnProfile && memberAuthStatus.hasEmailPassword && !isGeneratedMemberProfileEmail(user.email) && (
                           <MuiTooltip title="Enviar enlace para cambiar contraseña">
                             <Button variant="outlined" aria-label="Cambiar contraseña" onClick={handlePasswordReset} sx={avatarActionButtonSx}>
                               <KeyIcon />
                             </Button>
                           </MuiTooltip>
                         )}
-                        {isSuperAdmin && !memberAuthStatus.loading && !memberAuthStatus.unavailable && !memberAuthStatus.hasAccount && (
+                        {isSuperAdmin && user.email && !isGeneratedMemberProfileEmail(user.email) && !memberAuthStatus.loading && !memberAuthStatus.unavailable && !memberAuthStatus.hasAccount && (
                           <MuiTooltip title="Crear cuenta de acceso">
                             <Button variant="outlined" aria-label="Crear cuenta de acceso" onClick={() => setCreateAccountDialogOpen(true)} sx={avatarActionButtonSx}>
                               <PersonAddIcon />

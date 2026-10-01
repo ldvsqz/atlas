@@ -49,6 +49,18 @@ export const EXERCISE_CATEGORY_COLORS = {
 export const getGymExerciseCategoryColor = (category) =>
   EXERCISE_CATEGORY_COLORS[category] || EXERCISE_CATEGORY_COLORS[EXERCISE_CATEGORIES[0]];
 
+export const formatGymLayoutName = (date = new Date()) => {
+  const parts = new Intl.DateTimeFormat('es', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).formatToParts(date);
+  const dateParts = Object.fromEntries(parts.map(({ type, value }) => [type, value.replaceAll('.', '').toLowerCase()]));
+
+  return `C-${dateParts.weekday}.${dateParts.day}.${dateParts.month}.${dateParts.year}`;
+};
+
 export const createGymExerciseModel = (values = {}) => {
   const category = EXERCISE_CATEGORIES.includes(values.category) ? values.category : EXERCISE_CATEGORIES[0];
 
