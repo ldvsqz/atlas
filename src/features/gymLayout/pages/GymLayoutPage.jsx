@@ -26,6 +26,7 @@ import { useGymLayout } from '../hooks/useGymLayout';
 import {
   createGymLayoutModel,
   collidesWithReservedCell,
+  formatGymLayoutName,
   removeReservedCollisions,
 } from '../models/gymLayoutModels';
 import { downloadGymLayoutPdf } from '../utils/downloadGymLayoutPdf';
@@ -237,7 +238,7 @@ function GymLayoutPage({ menu }) {
     const settings = moduleSettings.getSettings('gymLayout');
     setLayout(createGymLayoutModel({
       id: `layout-${Date.now()}`,
-      name: 'Nuevo circuito',
+      name: formatGymLayoutName(),
       rows: settings.rows,
       cols: settings.cols,
       reservedCells: settings.reservedCells,
@@ -260,7 +261,7 @@ function GymLayoutPage({ menu }) {
     if (!layoutToDelete) return;
     await deleteLayout(layoutToDelete.id);
     if (layout.id === layoutToDelete.id) {
-      setLayout(createGymLayoutModel({ id: `layout-${Date.now()}`, name: 'Nuevo circuito' }));
+      setLayout(createGymLayoutModel({ id: `layout-${Date.now()}`, name: formatGymLayoutName() }));
       setViewMode('catalog');
     }
     setLayoutToDelete(null);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import UserService from '../../../Firebase/userService';
+import UserService, { generateMemberProfileEmail, isGeneratedMemberProfileEmail } from '../../../Firebase/userService';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import EditIcon from '@mui/icons-material/Edit';
@@ -94,7 +94,7 @@ function SetUser({ user, onSave, buttonSx, iconOnly = false }) {
     const updatedUser = {
       ...userState,
       dni: userState.dni.trim(),
-      email: userState.email.trim(),
+      email: userState.email.trim() || generateMemberProfileEmail(userState.uid),
       name: userState.name.trim(),
       phone: userState.phone.trim(),
     };
@@ -111,7 +111,7 @@ function SetUser({ user, onSave, buttonSx, iconOnly = false }) {
     const emailChanged = userData.email !== String(user.email || '').trim().toLowerCase();
 
     try {
-      if (isOwnAuthProfile && emailChanged) {
+      if (isOwnAuthProfile && emailChanged && !isGeneratedMemberProfileEmail(userData.email)) {
         await updateEmail(auth.currentUser, userData.email);
       }
       await UserService.update(userData.uid, userData);
@@ -224,7 +224,6 @@ function SetUser({ user, onSave, buttonSx, iconOnly = false }) {
                 <TextField
                   fullWidth
                   type="email"
-                  required
                   label="Email"
                   value={userState.email}
                   onChange={(event) => setUserState({
@@ -238,6 +237,7 @@ function SetUser({ user, onSave, buttonSx, iconOnly = false }) {
                       </InputAdornment>
                     ),
                   }}
+                  helperText={!userState.email.trim() ? 'Si lo deja vacío, se generará automáticamente.' : ' '}
                 />
               </Grid>
               <Grid item xs={12}>

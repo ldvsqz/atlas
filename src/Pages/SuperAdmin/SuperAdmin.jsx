@@ -113,7 +113,7 @@ function SuperAdmin({ menu }) {
   };
 
   useEffect(() => {
-    refresh().catch(() => showSnackbar('No se pudo cargar la administración global.', 'error'));
+    refresh().catch(() => showSnackbar('No se pudo cargar la administración.', 'error'));
   }, []);
 
   const approve = async (request) => {
@@ -273,7 +273,7 @@ function SuperAdmin({ menu }) {
                 >
             {tenants.map((tenant) => <MenuItem key={tenant.id} value={tenant.id}>{tenant.name}</MenuItem>)}
                 </Select>
-                <Button variant="outlined" color="inherit" onClick={handleProvisionAccounts} disabled={provisioningAccounts} sx={{ mt: 1 }}>
+                <Button variant="outlined" color="inherit" onClick={handleProvisionAccounts} disabled={true} sx={{ mt: 1 }}>
                   {provisioningAccounts ? 'Creando cuentas...' : 'Crear cuentas para miembros existentes'}
                 </Button>
               </Stack>

@@ -417,7 +417,7 @@ function PublicCycleView() {
             onPdfError={setError}
             circuitDetails={circuitDetails}
           />
-          <CyclePrintLayout cycle={cycle} days={days} showHeader={false} circuitDetails={circuitDetails} />
+          <CyclePrintLayout cycle={cycle} showHeader={false} />
         </>
       )}
 

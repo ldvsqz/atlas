@@ -87,7 +87,7 @@ function App() {
               <Route path="/reset" element={<ResetPassword />} />
               <Route path="/register" element={<Register />} />
               <Route path="/gym-request" element={<PrivateRoute><GymRequest menu={getMenu("Solicitar gimnasio")} /></PrivateRoute>} />
-              <Route path="/super-admin" element={<SuperAdminRoute><SuperAdmin menu={getMenu("Administración global")} /></SuperAdminRoute>} />
+              <Route path="/super-admin" element={<SuperAdminRoute><SuperAdmin menu={getMenu("Administración")} /></SuperAdminRoute>} />
               <Route path="/membership-requests" element={<AdminRoute><MembershipRequests menu={getMenu("Solicitudes de membresía")} /></AdminRoute>} />
               <Route path="/public/cycle/:id" element={<PublicCycleView />} />
               <Route path="/cycle/:id" element={<PublicCycleView />} />
@@ -99,7 +99,7 @@ function App() {
                 element={<AdminRoute><CashboxPage menu={getMenu("Arqueo de caja")} /></AdminRoute>}
               />
               <Route path="/training" element={<AdminRoute><TrainingPage menu={getMenu("Planificación")} /></AdminRoute>} />
-              <Route path="/gym-layout" element={<AdminRoute><GymLayoutPage menu={getMenu("Circuitos del gimnasio")} /></AdminRoute>} />
+              <Route path="/gym-layout" element={<AdminRoute><GymLayoutPage menu={getMenu("Circuitos")} /></AdminRoute>} />
               <Route path="/settings" element={<AdminRoute><Settings menu={getMenu("Configuración")} /></AdminRoute>} />
               <Route path="/exercises" element={<AdminRoute><Exercises menu={getMenu("Ejercicios")} /></AdminRoute>} />
               <Route path="/aboutus" element={<PrivateRoute><Aboutus menu={getMenu("Sobre nosotros")} /></PrivateRoute>} />

@@ -1,4 +1,5 @@
 import { MAIN_CIRCUIT_STATION_COUNT } from './mainCircuitBuilder.js';
+import { MICROCYCLE_DAY_COUNT } from './microcycleWorksheet.js';
 
 export const LOAD_INTENSITY_OPTIONS = ['Baja', 'Media', 'Alta', 'Máxima'];
 export const LOAD_VOLUME_OPTIONS = ['Bajo', 'Medio', 'Alto'];
@@ -93,14 +94,14 @@ const getProgressiveVolume = (weekIndex, weeks) => {
 };
 
 const getSessionIntensity = (microcycleIntensity, dayOfWeek) => {
-  if (dayOfWeek === 5) return microcycleIntensity === 'Máxima' ? 'Alta' : 'Baja';
+  if (dayOfWeek === 5 || dayOfWeek === 6) return microcycleIntensity === 'Máxima' ? 'Alta' : 'Baja';
   if (dayOfWeek === 3 && ['Alta', 'Máxima'].includes(microcycleIntensity)) return 'Máxima';
   if (dayOfWeek === 1 && microcycleIntensity === 'Baja') return 'Media';
   return microcycleIntensity;
 };
 
 const getSessionVolume = (microcycleVolume, dayOfWeek) => {
-  if (dayOfWeek === 5) return 'Bajo';
+  if (dayOfWeek === 5 || dayOfWeek === 6) return 'Bajo';
   if (dayOfWeek === 2 && microcycleVolume !== 'Bajo') return 'Alto';
   return microcycleVolume;
 };
@@ -138,7 +139,7 @@ export const createWizardLoadPlan = ({
   });
 
   const sessionLoads = microcycleLoads.reduce((loads, microcycleLoad) => {
-    for (let dayOfWeek = 1; dayOfWeek <= 5; dayOfWeek += 1) {
+    for (let dayOfWeek = 1; dayOfWeek <= MICROCYCLE_DAY_COUNT; dayOfWeek += 1) {
       loads[getSessionLoadKey(microcycleLoad.weekIndex, dayOfWeek)] = {
         weekIndex: microcycleLoad.weekIndex,
         dayOfWeek,
@@ -164,7 +165,7 @@ export const createSessionLoadsFromMicrocycleLoads = ({
   return microcycleLoads.reduce((loads, microcycleLoad) => {
     const weekIndex = Number(microcycleLoad.weekIndex || 1);
 
-    for (let dayOfWeek = 1; dayOfWeek <= 5; dayOfWeek += 1) {
+    for (let dayOfWeek = 1; dayOfWeek <= MICROCYCLE_DAY_COUNT; dayOfWeek += 1) {
       loads[getSessionLoadKey(weekIndex, dayOfWeek)] = {
         weekIndex,
         dayOfWeek,

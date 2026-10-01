@@ -1,4 +1,4 @@
-import { BLOCK_LABELS } from '../models/trainingModels';
+import { BLOCK_LABELS, normalizeFirestoreDate } from '../models/trainingModels';
 
 export const PUBLIC_CYCLE_ROUTE_PREFIX = '/public/cycle';
 
@@ -6,6 +6,12 @@ export const getPublicCyclePath = (cycleId) => `${PUBLIC_CYCLE_ROUTE_PREFIX}/${c
 
 export const getPublicCycleUrl = (cycleId) =>
   `${window.location.origin}${getPublicCyclePath(cycleId)}`;
+
+export const getMicrocycleDate = (cycle, weekIndex) => {
+  const cycleStart = normalizeFirestoreDate(cycle?.startsAt)
+    || normalizeFirestoreDate(cycle?.createdAt);
+  return cycleStart?.isValid() ? cycleStart.add(Number(weekIndex) - 1, 'week') : null;
+};
 
 export const groupDaysByWeek = (days = []) =>
   days.reduce((groups, day) => {
@@ -34,4 +40,3 @@ export const getExerciseValue = (exercise, keys, fallback = '-') => {
 };
 
 export const getBlockTitle = (blockKey) => BLOCK_LABELS[blockKey] || blockKey;
-

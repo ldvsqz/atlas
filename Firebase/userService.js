@@ -5,6 +5,10 @@ import { cachedRequest, invalidateRequests } from './requestCache';
 
 const COLLECTION_NAME = 'users';
 const hasGymAssignment = (user) => typeof user?.gymId === 'string' && user.gymId.trim().length > 0;
+const GENERATED_EMAIL_DOMAIN = 'members.atlas.invalid';
+
+export const generateMemberProfileEmail = (uid) => `member-${uid}@${GENERATED_EMAIL_DOMAIN}`;
+export const isGeneratedMemberProfileEmail = (email) => String(email || '').endsWith(`@${GENERATED_EMAIL_DOMAIN}`);
 
 class UserService {
 
@@ -26,6 +30,24 @@ class UserService {
         const userData = { ...user, gymId: user.gymId }; // Convert UserModel object to plain JavaScript object
         await setDoc(userRef, userData);
         return true;
+    }
+
+    async createMember({ name, phone, birthday, gymId }) {
+        const userRef = doc(collection(db, COLLECTION_NAME));
+        await setDoc(userRef, {
+            uid: userRef.id,
+            name,
+            email: generateMemberProfileEmail(userRef.id),
+            phone,
+            birthday,
+            dni: '',
+            until: new Date(),
+            gymId,
+            rol: 1,
+            createdAt: new Date(),
+        });
+        invalidateRequests(`users:all:${gymId}`);
+        return userRef.id;
     }
 
 
@@ -105,18 +127,17 @@ class UserService {
 
 
     //Update user data by passing user ID and new Data
-    update(uid, newData) {
-        return new Promise((resolve, reject) => {
-            const userRef = doc(db, COLLECTION_NAME, uid);
-            const userData = { ...newData }; // Convert UserModel object to plain JavaScript object
-            updateDoc(userRef, userData)
-                .then(() => {
-                    resolve(); // Resolves the promise without any value
-                })
-                .catch((error) => {
-                    reject(error); // Rejects the promise with the error
-                });
-        });
+    async update(uid, newData) {
+        const userRef = doc(db, COLLECTION_NAME, uid);
+        const existingUser = await getDoc(userRef);
+        const previousGymId = existingUser.data()?.gymId;
+        const userData = { ...newData };
+        await updateDoc(userRef, userData);
+        invalidateRequests(
+            `users:all:${previousGymId}`,
+            `users:all:${userData.gymId}`,
+            `users:all:${DEFAULT_GYM_ID}`,
+        );
     }
 
 

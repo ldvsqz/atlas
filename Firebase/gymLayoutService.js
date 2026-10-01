@@ -19,6 +19,7 @@ import {
   createGymLayoutModel,
   getGymExerciseCategoryColor,
   EXERCISE_CATEGORIES,
+  formatGymLayoutName,
   removeReservedCollisions,
 } from '../src/features/gymLayout/models/gymLayoutModels';
 
@@ -134,7 +135,7 @@ class GymLayoutService {
     const cols = Math.max(1, Number(layout.cols || 1));
     const reservedCells = Array.isArray(layout.reservedCells) ? layout.reservedCells : [];
     const payload = {
-      name: layout.name?.trim() || 'Circuito principal',
+      name: layout.name?.trim() || formatGymLayoutName(),
       rows,
       cols,
       reservedCells,
