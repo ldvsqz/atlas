@@ -400,6 +400,11 @@ function User({ menu }) {
                             cursor: 'pointer'
                           }}>
                           {util.formatDateShort(util.getDateFromFirebase(user.until))} {user.rol === 0 && '(Admin)'}
+                          {getSafeDate(user.createdAt) && (
+                            <Box sx={{ color: 'text.secondary', fontSize: '0.78rem', mt: 0.25 }}>
+                              Desde {util.formatDateShort(util.getDateFromFirebase(user.createdAt))} · {formatMembershipTenure(user.createdAt)}
+                            </Box>
+                          )}
                         </TableCell>
                           )}
                         {!showAdmins && (

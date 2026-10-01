@@ -144,6 +144,15 @@ function Menu({
             <ListItemButton component={Link} to="/gym-request">
               <ListItemIcon><GroupIcon /></ListItemIcon>
               <ListItemText primary="Solicitar gimnasio" />
+              </ListItemButton>
+          </ListItem>
+        )}
+
+        {isSuperAdmin && (
+          <ListItem key="Administración global" disablePadding>
+            <ListItemButton component={Link} to="/super-admin">
+              <ListItemIcon><AdminPanelSettingsIcon /></ListItemIcon>
+              <ListItemText primary="Administración global" />
             </ListItemButton>
           </ListItem>
         )}
@@ -259,6 +268,11 @@ function Menu({
               {menuTitle}
 
             </Typography>
+            {isAdmin && activeGymName && (
+            <Typography variant="body2" sx={{ ml: 2, maxWidth: 260, textAlign: 'right' }}>
+              Administrando: {activeGymName}
+            </Typography>
+            )}
           </Toolbar>
         </AppBar>
       </Box>
