@@ -133,7 +133,8 @@ function GymGrid({
         </Box>
       )}
 
-      <Box 
+      <Box
+        data-gym-grid-scroll
         sx={{ 
           p: isMobile ? 0.5 : 2, 
           overflowX: 'auto', 
@@ -144,6 +145,7 @@ function GymGrid({
         }}
       >
         <Box
+          data-gym-grid-board
           onClick={handleBackgroundGridClick}
           sx={{
             width: boardWidth,
@@ -221,6 +223,7 @@ function GymGrid({
                       >
                         <Box
                           component="img"
+                          data-gym-layout-exercise-image
                           src={ex.imageDataUrl}
                           alt={ex.name}
                           draggable={false}

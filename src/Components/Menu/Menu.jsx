@@ -19,7 +19,6 @@ import Divider from "@mui/material/Divider";
 import GroupIcon from "@mui/icons-material/Group";
 import AccountBoxIcon from "@mui/icons-material/AccountBox";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
-import InfoIcon from "@mui/icons-material/Info";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import GridOnIcon from "@mui/icons-material/GridOn";
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -148,15 +147,6 @@ function Menu({
           </ListItem>
         )}
 
-        {isSuperAdmin && (
-          <ListItem key="Administración global" disablePadding>
-            <ListItemButton component={Link} to="/super-admin">
-              <ListItemIcon><AdminPanelSettingsIcon /></ListItemIcon>
-              <ListItemText primary="Administración global" />
-            </ListItemButton>
-          </ListItem>
-        )}
-
         {isAdmin && (
           <ListItem key="Finanzas" disablePadding>
             <ListItemButton component={Link} to="/finance">
@@ -210,34 +200,31 @@ function Menu({
           </ListItem>
         )}
 
-        <ListItem key="Sobre nosotros" disablePadding>
-          <ListItemButton component={Link} to="/aboutus">
-            <ListItemIcon>
-              <InfoIcon />
-            </ListItemIcon>
-            <ListItemText primary="Sobre nosotros" />
-          </ListItemButton>
-        </ListItem>
-
       </List>
       <Box sx={{ mt: 'auto' }}>
-        {(isAdmin && activeGymName) || version ? (
-          <>
-            <Divider />
-            <Box sx={{ px: 2, py: 1.5 }}>
-              {isAdmin && activeGymName && (
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ lineHeight: 1.4, overflowWrap: 'anywhere' }}>
-                  Administrando: {activeGymName}
-                </Typography>
-              )}
-              {version && (
-                <Typography variant="caption" color="text.disabled" display="block" sx={{ mt: 0.25 }}>
-                  Versión {version}
-                </Typography>
-              )}
-            </Box>
-          </>
-        ) : null}
+        <Divider />
+        <Box sx={{ px: 2, py: 1.5 }}>
+          {isAdmin && activeGymName && (
+            <Typography variant="caption" color="text.secondary" display="block" sx={{ lineHeight: 1.4, overflowWrap: 'anywhere' }}>
+              {activeGymName}
+            </Typography>
+          )}
+          {version && (
+            <Typography variant="caption" color="text.disabled" display="block" sx={{ mt: 0.25 }}>
+              Versión {version}
+            </Typography>
+          )}
+          <Typography
+            component={Link}
+            to="/aboutus"
+            variant="caption"
+            color="text.disabled"
+            display="block"
+            sx={{ mt: 0.25, textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+          >
+            Sobre nosotros
+          </Typography>
+        </Box>
         <Divider />
         <ListItem key="logout" disablePadding>
           <Logout />
@@ -268,11 +255,6 @@ function Menu({
               {menuTitle}
 
             </Typography>
-            {isAdmin && activeGymName && (
-            <Typography variant="body2" sx={{ ml: 2, maxWidth: 260, textAlign: 'right' }}>
-              Administrando: {activeGymName}
-            </Typography>
-            )}
           </Toolbar>
         </AppBar>
       </Box>

@@ -60,7 +60,11 @@ function LayoutExerciseList({
 
       <Divider />
 
-      <Stack spacing={1} sx={{ p: isMobile ? 1.5 : 2, maxHeight: 400, overflowY: 'auto' }}>
+      <Stack
+        data-gym-layout-exercises
+        spacing={1}
+        sx={{ p: isMobile ? 1.5 : 2, maxHeight: 400, overflowY: 'auto' }}
+      >
         {exercises.length ? (
           exercises.map((exercise, index) => (
             <Box
@@ -104,8 +108,18 @@ function LayoutExerciseList({
                   <Typography fontWeight={800} variant="body2" sx={{ overflowWrap: 'anywhere', lineHeight: 1.2 }}>
                     {index + 1}. {exercise.name}
                   </Typography>
-                  {exercise.description && !isMobile && (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', overflowWrap: 'anywhere' }}>
+                  {exercise.description && (
+                    <Typography
+                      data-gym-layout-description
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{
+                        mt: 0.5,
+                        display: { xs: 'none', sm: 'block' },
+                        overflowWrap: 'anywhere',
+                        whiteSpace: 'pre-wrap',
+                      }}
+                    >
                       {exercise.description}
                     </Typography>
                   )}
@@ -126,15 +140,28 @@ function LayoutExerciseList({
       <Divider />
 
       <Box sx={{ p: isMobile ? 1.5 : 2, bgcolor: (theme) => alpha(theme.palette.text.primary, 0.01) }}>
-        <TextField
-          label="Notas de la rutina"
-          multiline
-          rows={isMobile ? 2 : 3}
-          value={listNotes}
-          onChange={(event) => onListNotesChange?.(event.target.value)}
-          fullWidth
-          size="small"
-        />
+        <Box data-gym-layout-notes-input>
+          <TextField
+            label="Notas de la rutina"
+            multiline
+            rows={isMobile ? 2 : 3}
+            value={listNotes}
+            onChange={(event) => onListNotesChange?.(event.target.value)}
+            fullWidth
+            size="small"
+          />
+        </Box>
+        <Box data-gym-layout-notes-preview sx={{ display: 'none' }}>
+          <Typography variant="caption" color="text.secondary" fontWeight={700}>
+            Notas de la rutina
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{ mt: 0.5, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
+          >
+            {listNotes || 'Sin notas.'}
+          </Typography>
+        </Box>
       </Box>
     </Paper>
   );
