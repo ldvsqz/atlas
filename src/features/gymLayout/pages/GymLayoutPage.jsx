@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   Container,
@@ -29,7 +29,7 @@ import {
   formatGymLayoutName,
   removeReservedCollisions,
 } from '../models/gymLayoutModels';
-import { downloadGymLayoutPdf } from '../utils/downloadGymLayoutPdf';
+import { downloadGymLayoutImage } from '../utils/downloadGymLayoutImage';
 
 function GymLayoutPage({ menu }) {
   const {
@@ -53,6 +53,7 @@ function GymLayoutPage({ menu }) {
   } = useGymLayout();
 
   const { showSnackbar } = useSnackbar();
+  const imageExportRef = useRef(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingExercise, setEditingExercise] = useState(null);
   const [exerciseToDelete, setExerciseToDelete] = useState(null);
@@ -253,8 +254,17 @@ function GymLayoutPage({ menu }) {
     setViewMode('editor');
   };
 
-  const handleDownloadPdf = () => {
-    downloadGymLayoutPdf({ layout, exercises, orderedExercises: orderedPlacedExercises });
+  const handleDownloadImage = async () => {
+    try {
+      await downloadGymLayoutImage({
+        element: imageExportRef.current,
+        layoutName: layout.name,
+      });
+      showSnackbar('Imagen del circuito descargada.', 'success');
+    } catch (error) {
+      console.error('Error downloading gym layout image:', error);
+      showSnackbar('No se pudo descargar la imagen del circuito.', 'error');
+    }
   };
 
   const handleDeleteLayout = async () => {
@@ -279,12 +289,6 @@ function GymLayoutPage({ menu }) {
           <Box>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }} justifyContent="space-between">
               <Box>
-                <Typography variant="h4" fontWeight={900} letterSpacing="-0.5px">
-                  Plano de distribución de circuito
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Administra circuitos y estaciones del gimnasio.
-                </Typography>
               </Box>
               {viewMode === 'editor' && (
                 <Button
@@ -321,44 +325,58 @@ function GymLayoutPage({ menu }) {
                 onSave={handleSave}
                 onNew={handleNewLayout}
                 onClear={handleClearLayout}
-                onDownloadPdf={handleDownloadPdf}
+                onDownloadImage={handleDownloadImage}
               />
 
-              <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2.5} alignItems="start">
-                <Box sx={{ width: { xs: '100%', lg: 280, xl: 320 }, flexShrink: 0 }}>
-                  <ExercisePalette
-                    exercises={exercises}
-                    placedExerciseIds={placedExerciseIds}
-                    loading={exercisesLoading}
-                    onCreate={() => { setEditingExercise(null); setDialogOpen(true); }}
-                    onEdit={(ex) => { setEditingExercise(ex); setDialogOpen(true); }}
-                    onDelete={setExerciseToDelete}
-                    selectedExercise={selectedPaletteExercise}
-                    onSelectExercise={setSelectedPaletteExercise}
-                  />
-                </Box>
+              <Box
+                ref={imageExportRef}
+                data-gym-layout-export
+                sx={{ width: '100%', minWidth: 0, p: { xs: 1, md: 2 }, bgcolor: 'background.paper', borderRadius: 2 }}
+              >
+                <Typography variant="h6" fontWeight={800} sx={{ mb: 2 }}>
+                  {layout.name || 'Circuito del gimnasio'}
+                </Typography>
+                <Stack
+                  data-gym-layout-export-columns
+                  direction={{ xs: 'column', lg: 'row' }}
+                  spacing={2.5}
+                  alignItems="start"
+                >
+                  <Box data-html2canvas-ignore sx={{ width: { xs: '100%', lg: 280, xl: 320 }, flexShrink: 0 }}>
+                    <ExercisePalette
+                      exercises={exercises}
+                      placedExerciseIds={placedExerciseIds}
+                      loading={exercisesLoading}
+                      onCreate={() => { setEditingExercise(null); setDialogOpen(true); }}
+                      onEdit={(ex) => { setEditingExercise(ex); setDialogOpen(true); }}
+                      onDelete={setExerciseToDelete}
+                      selectedExercise={selectedPaletteExercise}
+                      onSelectExercise={setSelectedPaletteExercise}
+                    />
+                  </Box>
 
-                <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
-                  <GymGrid
-                    layout={layout}
-                    exercises={exercises}
-                    onLayoutChange={handleLayoutItemsChange}
-                    onDropExercise={handleDropExercise}
-                    onRemoveExercise={handleRemoveExerciseFromGrid}
-                    selectedActiveExercise={selectedPaletteExercise}
-                    onSelectExercise={setSelectedPaletteExercise}
-                  />
-                </Box>
+                  <Box data-gym-layout-export-grid sx={{ flex: 1, minWidth: 0, width: '100%' }}>
+                    <GymGrid
+                      layout={layout}
+                      exercises={exercises}
+                      onLayoutChange={handleLayoutItemsChange}
+                      onDropExercise={handleDropExercise}
+                      onRemoveExercise={handleRemoveExerciseFromGrid}
+                      selectedActiveExercise={selectedPaletteExercise}
+                      onSelectExercise={setSelectedPaletteExercise}
+                    />
+                  </Box>
 
-                <Box sx={{ width: { xs: '100%', lg: 340, xl: 380 }, flexShrink: 0 }}>
-                  <LayoutExerciseList
-                    exercises={orderedPlacedExercises}
-                    listNotes={layout.listNotes || ''}
-                    onReorder={handleReorderExercise}
-                    onListNotesChange={handleListNotesChange}
-                  />
-                </Box>
-              </Stack>
+                  <Box data-gym-layout-export-list sx={{ width: { xs: '100%', lg: 340, xl: 380 }, flexShrink: 0 }}>
+                    <LayoutExerciseList
+                      exercises={orderedPlacedExercises}
+                      listNotes={layout.listNotes || ''}
+                      onReorder={handleReorderExercise}
+                      onListNotesChange={handleListNotesChange}
+                    />
+                  </Box>
+                </Stack>
+              </Box>
             </>
           )}
         </Stack>

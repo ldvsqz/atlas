@@ -20,6 +20,7 @@ import {
     TableRow,
     Paper,
     CircularProgress,
+    LinearProgress,
     Stack,
     Alert as MuiAlert,
     Divider
@@ -47,6 +48,7 @@ import {
 
 const util = new Util();
 const formatCurrency = (amount) => `₡${Number(amount || 0).toFixed(2)}`;
+const formatPdfAmount = (amount) => Number(amount || 0).toFixed(2);
 const formatMonth = (month) => (month ? dayjs(month, 'YYYY-MM').format('MMMM YYYY') : '-');
 const DEFAULT_DISTRIBUTION_PERCENTAGES = {
     part1: 40,
@@ -340,13 +342,13 @@ function CashboxPage() {
             theme: 'grid',
             head: [['Concepto', 'Monto']],
             body: [
-                ['Ingresos del periodo', formatCurrency(cashbox.monthlyIncome)],
-                ['Gastos del periodo', formatCurrency(cashbox.monthlyExpense)],
-                ['Balance total', formatCurrency(cashbox.totalBalance)],
-                ['Deudas', formatCurrency(cashbox.debts)],
-                ['Balance después de deudas', formatCurrency(cashbox.balanceAfterDebts)],
-                ['M - Fondo de mantenimiento 20%', formatCurrency(cashbox.maintenanceFund)],
-                ['Balance distribuible', formatCurrency(cashbox.distributableBalance)],
+                ['Ingresos del periodo', formatPdfAmount(cashbox.monthlyIncome)],
+                ['Gastos del periodo', formatPdfAmount(cashbox.monthlyExpense)],
+                ['Balance total', formatPdfAmount(cashbox.totalBalance)],
+                ['Deudas', formatPdfAmount(cashbox.debts)],
+                ['Balance después de deudas', formatPdfAmount(cashbox.balanceAfterDebts)],
+                ['M - Fondo de mantenimiento 20%', formatPdfAmount(cashbox.maintenanceFund)],
+                ['Balance distribuible', formatPdfAmount(cashbox.distributableBalance)],
             ],
             styles: { fontSize: 10 },
             headStyles: { fillColor: [69, 90, 100] },
@@ -360,7 +362,7 @@ function CashboxPage() {
                 ...getDistributionKeys(distributionPercentages, partsCount).map((key) => [
                     getDistributionLabel(key),
                     `${distributionPercentages[key] ?? 0}%`,
-                    formatCurrency(cashbox.distributions[key] ?? 0),
+                    formatPdfAmount(cashbox.distributions[key] ?? 0),
                 ]),
             ],
             styles: { fontSize: 10 },
@@ -376,7 +378,7 @@ function CashboxPage() {
                 finance.type === 'income' ? 'Ingreso' : 'Gasto',
                 finance.category,
                 finance.description,
-                `${finance.type === 'income' ? '+' : '-'}${formatCurrency(finance.amount)}`,
+                `${finance.type === 'income' ? '+' : '-'}${formatPdfAmount(finance.amount)}`,
             ]),
             styles: { fontSize: 8 },
             headStyles: { fillColor: [69, 90, 100] },
@@ -416,13 +418,13 @@ function CashboxPage() {
                 theme: 'grid',
                 head: [['Concepto', 'Monto']],
                 body: [
-                    ['Ingresos del periodo', formatCurrency(summary.monthlyIncome ?? cashbox.monthlyIncome)],
-                    ['Gastos del periodo', formatCurrency(summary.monthlyExpense ?? cashbox.monthlyExpense)],
-                    ['Balance total', formatCurrency(summary.totalBalance ?? cashbox.totalBalance)],
-                    ['Deudas', formatCurrency(summary.debts ?? cashbox.debts)],
-                    ['Balance después de deudas', formatCurrency(summary.balanceAfterDebts ?? cashbox.balanceAfterDebts)],
-                    ['M - Fondo de mantenimiento 20%', formatCurrency(summary.maintenanceFund ?? cashbox.maintenanceFund)],
-                    ['Balance distribuible', formatCurrency(summary.distributableBalance ?? cashbox.distributableBalance)],
+                    ['Ingresos del periodo', formatPdfAmount(summary.monthlyIncome ?? cashbox.monthlyIncome)],
+                    ['Gastos del periodo', formatPdfAmount(summary.monthlyExpense ?? cashbox.monthlyExpense)],
+                    ['Balance total', formatPdfAmount(summary.totalBalance ?? cashbox.totalBalance)],
+                    ['Deudas', formatPdfAmount(summary.debts ?? cashbox.debts)],
+                    ['Después de deudas', formatPdfAmount(summary.balanceAfterDebts ?? cashbox.balanceAfterDebts)],
+                    ['M - Fondo de mantenimiento 20%', formatPdfAmount(summary.maintenanceFund ?? cashbox.maintenanceFund)],
+                    ['Balance distribuible', formatPdfAmount(summary.distributableBalance ?? cashbox.distributableBalance)],
                 ],
                 styles: { fontSize: 10 },
                 headStyles: { fillColor: [69, 90, 100] },
@@ -436,7 +438,7 @@ function CashboxPage() {
                     ...getDistributionKeys(cashbox.distributionPercentages || {}, cashbox.partsCount || partsCount).map((key) => [
                         getDistributionLabel(key),
                         `${cashbox.distributionPercentages?.[key] ?? 0}%`,
-                        formatCurrency(distributions[key] ?? 0),
+                        formatPdfAmount(distributions[key] ?? 0),
                     ]),
                 ],
                 styles: { fontSize: 10 },
@@ -581,9 +583,6 @@ function CashboxPage() {
                                     <Typography variant="h5" fontWeight={800}>
                                         Caja de fin de mes
                                     </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Balance del periodo, deudas, fondo de mantenimiento y distribución.
-                                    </Typography>
                                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                                         Periodo: {formatPeriodLabel(cashbox.period, util)}
                                     </Typography>
@@ -602,80 +601,85 @@ function CashboxPage() {
                                 </Stack>
                             </Stack>
 
-                            <Grid container spacing={2} sx={{ mb: 2 }}>
-                                <Grid item xs={12} md={3}>
-                                    <Card variant="outlined">
-                                        <CardContent>
-                                            <Typography variant="body2" color="text.secondary">Mes de caja</Typography>
-                                            <Typography variant="h6">{formatMonth(cashboxMonth)}</Typography>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                                <Grid item xs={12} md={3}>
-                                    <Card variant="outlined">
-                                        <CardContent>
-                                            <Typography variant="body2" color="text.secondary">Balance total</Typography>
-                                            <Typography variant="h6">{formatCurrency(cashbox.totalBalance)}</Typography>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                                <Grid item xs={12} sm={6} md={3}>
-                                    <Card variant="outlined">
-                                        <CardContent>
-                                            <Typography variant="body2" color="text.secondary">Deudas</Typography>
-                                            <Typography variant="h6">{formatCurrency(debtAmount)}</Typography>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                            </Grid>
-
-                            <Grid container spacing={2}>
-                                <Grid item xs={12} sm={6} md={3}>
-                                    <Card variant="outlined">
-                                        <CardContent>
-                                            <Typography variant="body2" color="text.secondary">Después de deudas</Typography>
-                                            <Typography variant="h6">{formatCurrency(cashbox.balanceAfterDebts)}</Typography>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                                <Grid item xs={12} sm={6} md={3}>
-                                    <Card variant="outlined">
-                                        <CardContent>
-                                            <Typography variant="body2" color="text.secondary">Mantenimiento {maintenancePercentage}% (M)</Typography>
-                                            <Typography variant="h6">{formatCurrency(cashbox.maintenanceFund)}</Typography>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                                <Grid item xs={12} sm={6} md={3}>
-                                    <Card variant="outlined">
-                                        <CardContent>
-                                            <Typography variant="body2" color="text.secondary">Distribuible</Typography>
-                                            <Typography variant="h6">{formatCurrency(cashbox.distributableBalance)}</Typography>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                            </Grid>
-
-                            {cashbox.distributionTotalPercentage !== 100 && (
-                                <MuiAlert severity="warning" sx={{ mb: 2 }}>
-                                    La suma de los porcentajes del monto distribuible es {cashbox.distributionTotalPercentage}%.
-                                    Debe ser 100% y no incluye el fondo de mantenimiento.
-                                </MuiAlert>
-                            )}
+                            <Paper variant="outlined" sx={{ p: 2, mb: 2, maxWidth: 560 }}>
+                                <Stack spacing={1}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                                        <Typography>Balance total</Typography>
+                                        <Typography>{formatCurrency(cashbox.totalBalance)}</Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                                        <Typography>Deudas</Typography>
+                                        <Typography color="error.main">- {formatCurrency(cashbox.debts)}</Typography>
+                                    </Box>
+                                    <Divider />
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                                        <Typography fontWeight={600}>Después de deudas</Typography>
+                                        <Typography fontWeight={600}>{formatCurrency(cashbox.balanceAfterDebts)}</Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                                        <Typography>Mantenimiento ({maintenancePercentage}%)</Typography>
+                                        <Typography color="error.main">- {formatCurrency(cashbox.maintenanceFund)}</Typography>
+                                    </Box>
+                                    <Divider />
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                                        <Typography variant="h6" fontWeight={700}>Distribuible</Typography>
+                                        <Typography variant="h6" fontWeight={700}>
+                                            {formatCurrency(cashbox.distributableBalance)}
+                                        </Typography>
+                                    </Box>
+                                </Stack>
+                            </Paper>
 
                             <Divider sx={{ my: 2 }} />
 
+                            <Stack spacing={1.5} sx={{ mb: 2 }}>
+                                <Box>
+                                    <Typography variant="h6" fontWeight={700}>
+                                        Distribución
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Monto a distribuir: {formatCurrency(cashbox.distributableBalance)}
+                                    </Typography>
+                                </Box>
+                                {cashbox.distributionTotalPercentage !== 100 && (
+                                    <MuiAlert severity="warning">
+                                        Porcentajes asignados: {cashbox.distributionTotalPercentage}%.
+                                        Deben sumar 100% y no incluyen el fondo de mantenimiento.
+                                    </MuiAlert>
+                                )}
+                            </Stack>
+
                             <Grid container spacing={2}>
-                                {getDistributionKeys(distributionPercentages, partsCount).map((key) => (
-                                    <Grid item xs={12} md={4} key={key}>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {getDistributionLabel(key)} ({distributionPercentages[key]}%)
-                                        </Typography>
-                                        <Typography variant="h6">
-                                            {formatCurrency(cashbox.distributions[key] ?? 0)}
-                                        </Typography>
-                                    </Grid>
-                                ))}
+                                {getDistributionKeys(distributionPercentages, partsCount).map((key) => {
+                                    const percentage = Number(distributionPercentages[key] ?? 0);
+                                    const progressValue = Number.isFinite(percentage)
+                                        ? Math.min(Math.max(percentage, 0), 100)
+                                        : 0;
+
+                                    return (
+                                        <Grid item xs={12} md={4} key={key}>
+                                            <Box sx={{ mb: 1 }}>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {getDistributionLabel(key)}
+                                                    </Typography>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {distributionPercentages[key] ?? 0}%
+                                                    </Typography>
+                                                </Box>
+                                                <LinearProgress
+                                                    variant="determinate"
+                                                    value={progressValue}
+                                                    aria-label={`${getDistributionLabel(key)}: ${percentage}%`}
+                                                    sx={{ height: 8, borderRadius: 4 }}
+                                                />
+                                            </Box>
+                                            <Typography variant="h6">
+                                                {formatCurrency(cashbox.distributions[key] ?? 0)}
+                                            </Typography>
+                                        </Grid>
+                                    );
+                                })}
                             </Grid>
                         </Paper>
 

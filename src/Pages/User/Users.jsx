@@ -27,7 +27,10 @@ import Skeleton from '@mui/material/Skeleton';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Fab from '@mui/material/Fab';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import AddIcon from '@mui/icons-material/Add';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -213,18 +216,32 @@ function User({ menu }) {
     }
   };
 
-  const handleWaNotificationResponse = async (response, user) => {
-    if (!response) return;
-
+  const getMembershipNotificationMessage = (user) => {
     const configuredMessage = moduleSettings.getSettings('members').notificationMessage?.trim();
-    const msgText = configuredMessage
+    return configuredMessage
       ? configuredMessage
         .replaceAll('{{nombre}}', util.getFirstName(user.name))
         .replaceAll('{{fechaMembresia}}', util.formatDateShort(util.getDateFromFirebase(user.until)))
       : util.selectMembershipMessage(user.name, user.until);
+  };
+
+  const handleWaNotificationResponse = async (response, user) => {
+    if (!response) return;
+
+    const msgText = getMembershipNotificationMessage(user);
     const phone = user.phone || '71699673';
     util.openWAChat(phone, msgText);
     showSnackbar(`Abriendo WhatsApp Web para notificar a ${user.name}...`, 'info');
+  };
+
+  const handleCopyNotificationMessage = async (user) => {
+    try {
+      await navigator.clipboard.writeText(getMembershipNotificationMessage(user));
+      showSnackbar('Mensaje copiado al portapapeles.', 'success');
+    } catch (error) {
+      console.error('Error copying membership notification message:', error);
+      showSnackbar('No se pudo copiar el mensaje.', 'error');
+    }
   };
 
   const handleOpenAddUserModal = () => {
@@ -400,11 +417,6 @@ function User({ menu }) {
                             cursor: 'pointer'
                           }}>
                           {util.formatDateShort(util.getDateFromFirebase(user.until))} {user.rol === 0 && '(Admin)'}
-                          {getSafeDate(user.createdAt) && (
-                            <Box sx={{ color: 'text.secondary', fontSize: '0.78rem', mt: 0.25 }}>
-                              Desde {util.formatDateShort(util.getDateFromFirebase(user.createdAt))} · {formatMembershipTenure(user.createdAt)}
-                            </Box>
-                          )}
                         </TableCell>
                           )}
                         {!showAdmins && (
@@ -416,14 +428,23 @@ function User({ menu }) {
                               message={`¿Desea renovar la membresía de: ${user.name}?`}
                               onResponse={(response) => handleRenewResponse(response, user)}
                             />
-                            { 
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Alert
                                 buttonName="Notificar"
                                 title="Notificar"
                                 message={`¿Desea notificar el vencimiento de la membresía de: ${user.name}?`}
                                 onResponse={(response) => handleWaNotificationResponse(response, user)}
                               />
-                            }
+                              <Tooltip title="Copiar mensaje">
+                                <IconButton
+                                  aria-label="Copiar mensaje de notificación"
+                                  onClick={() => handleCopyNotificationMessage(user)}
+                                  size="small"
+                                >
+                                  <ContentCopyIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
                           </TableCell>
                         )}
                       </TableRow>
