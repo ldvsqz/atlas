@@ -15,7 +15,7 @@ import {
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import SaveIcon from '@mui/icons-material/Save';
 import AddIcon from '@mui/icons-material/Add';
-import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 
 function LayoutToolbar({
   layout,
@@ -25,7 +25,7 @@ function LayoutToolbar({
   onSave,
   onNew,
   onClear,
-  onDownloadPdf,
+  onDownloadImage,
 }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -85,11 +85,13 @@ function LayoutToolbar({
 
                 <IconButton 
                   color="inherit" 
-                  onClick={onDownloadPdf} 
+                  onClick={onDownloadImage}
                   disabled={!placedCount} 
+                  aria-label="Descargar imagen"
+                  title="Descargar imagen"
                   sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 1, flex: 1 }}
                 >
-                  <PictureAsPdfIcon fontSize="small" />
+                  <ImageOutlinedIcon fontSize="small" />
                 </IconButton>
 
                 <IconButton 
@@ -118,8 +120,8 @@ function LayoutToolbar({
                 <Button color="inherit" variant="outlined" startIcon={<RestartAltIcon />} onClick={onClear} disabled={saving || !placedCount} sx={{ borderRadius: 1.5, textTransform: 'none' }}>
                   Limpiar
                 </Button>
-                <Button color="inherit" variant="outlined" startIcon={<PictureAsPdfIcon />} onClick={onDownloadPdf} disabled={!placedCount} sx={{ borderRadius: 1.5, textTransform: 'none' }}>
-                  PDF
+                <Button color="inherit" variant="outlined" startIcon={<ImageOutlinedIcon />} onClick={onDownloadImage} disabled={!placedCount} sx={{ borderRadius: 1.5, textTransform: 'none' }}>
+                  Imagen
                 </Button>
                 <Button
                   variant="contained"
